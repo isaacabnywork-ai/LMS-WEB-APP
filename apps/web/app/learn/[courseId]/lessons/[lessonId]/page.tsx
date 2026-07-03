@@ -41,8 +41,13 @@ export default async function LessonPage({
   }
 
   const lesson = allLessons[currentIndex];
-  const prevLessonId = currentIndex > 0 ? allLessons[currentIndex - 1].id : null;
-  const nextLessonId = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1].id : null;
+  if (!lesson) redirect(`/learn/${courseId}`);
+
+  const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
+  const prevLessonId = prevLesson ? prevLesson.id : null;
+
+  const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
+  const nextLessonId = nextLesson ? nextLesson.id : null;
 
   // Fetch current lesson's module name
   const currentModule = course.modules.find(m => m.id === lesson.moduleId);

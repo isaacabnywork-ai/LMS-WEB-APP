@@ -57,10 +57,10 @@ export function LessonViewerClient({
       if (embedUrl.includes("youtube.com/watch?v=")) {
         embedUrl = embedUrl.replace("watch?v=", "embed/");
         // Remove any additional query parameters like &t=
-        embedUrl = embedUrl.split("&")[0];
+        embedUrl = embedUrl.split("&")[0] || "";
       } else if (embedUrl.includes("youtu.be/")) {
         embedUrl = embedUrl.replace("youtu.be/", "youtube.com/embed/");
-        embedUrl = embedUrl.split("?")[0];
+        embedUrl = embedUrl.split("?")[0] || "";
       }
 
       return (

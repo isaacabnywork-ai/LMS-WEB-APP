@@ -64,10 +64,6 @@ export async function markLessonComplete(lessonId: string, courseId: string, isC
   revalidatePath(`/student/courses/${courseId}/learn`);
   revalidatePath(`/student/courses/${courseId}/learn/lessons/${lessonId}`);
   return { success: true, isComplete };
-
-  revalidatePath(`/student/courses/${courseId}/learn`);
-  revalidatePath(`/student/courses/${courseId}/learn/lessons/${lessonId}`);
-  return { success: true, progress: progressPercentage };
 }
 
 export async function submitAssignment(assignmentId: string, data: { contentUrl?: string; textContent?: string }) {

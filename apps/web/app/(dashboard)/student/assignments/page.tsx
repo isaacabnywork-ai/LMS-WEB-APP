@@ -55,7 +55,7 @@ export default async function StudentAssignmentsPage() {
       id: a.id,
       title: a.title,
       course: a.course.title,
-      courseColor: COURSE_COLORS[i % COURSE_COLORS.length],
+      courseColor: COURSE_COLORS[i % COURSE_COLORS.length] || "bg-teal-500",
       dueDate: a.dueAt ? new Date(a.dueAt).toLocaleString() : "No due date",
       status,
       maxScore: a.maxScore,

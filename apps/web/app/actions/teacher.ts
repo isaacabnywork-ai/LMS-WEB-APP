@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 type CourseData = {
   title: string;
@@ -232,11 +233,13 @@ export async function createAssignment(data: {
     const student = enrolment.user;
     
     // 1. Send Mock Email
-    await sendEmail({
-      to: student.email,
-      subject: `New Assignment in ${course.title}`,
-      html: `<p>A new assignment "<strong>${data.title}</strong>" has been posted in ${course.title}.</p>`
-    });
+    if (student.email) {
+      await sendEmail({
+        to: student.email,
+        subject: `New Assignment in ${course.title}`,
+        html: `<p>A new assignment "<strong>${data.title}</strong>" has been posted in ${course.title}.</p>`
+      });
+    }
 
     // 2. Trigger Mock Realtime Event (SSE)
     triggerEvent(`user-${student.id}`, "new_assignment", {

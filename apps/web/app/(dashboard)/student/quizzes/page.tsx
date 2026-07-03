@@ -51,7 +51,7 @@ export default async function StudentQuizzesPage() {
       id: q.id,
       title: q.title,
       course: q.course.title,
-      courseColor: COURSE_COLORS[i % COURSE_COLORS.length],
+      courseColor: COURSE_COLORS[i % COURSE_COLORS.length] || "bg-teal-500",
       dueDate: q.endAt ? new Date(q.endAt).toLocaleDateString() : "No deadline",
       duration: q.timeLimitMins ? `${q.timeLimitMins} min` : "No limit",
       questions: q.questions.length,

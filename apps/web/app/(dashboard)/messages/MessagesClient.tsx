@@ -91,14 +91,14 @@ export default function MessagesClient({
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-sm overflow-hidden">
                   {u.image ? <img src={u.image} alt={u.name} className="w-full h-full object-cover" /> : u.name.substring(0, 2).toUpperCase()}
                 </div>
-                {unreadCounts[u.id] > 0 && (
+                {(unreadCounts[u.id] ?? 0) > 0 && (
                   <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white dark:border-slate-900">
                     {unreadCounts[u.id]}
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className={`truncate text-sm ${unreadCounts[u.id] > 0 ? 'font-bold' : 'font-semibold'}`}>{u.name}</h3>
+                <h3 className={`truncate text-sm ${(unreadCounts[u.id] ?? 0) > 0 ? 'font-bold' : 'font-semibold'}`}>{u.name}</h3>
                 <p className="text-xs text-foreground/50 capitalize truncate">{u.role}</p>
               </div>
             </button>
@@ -139,7 +139,8 @@ export default function MessagesClient({
               ) : (
                 activeMessages.map((m, idx) => {
                   const isMine = m.senderId === currentUserId;
-                  const showTime = idx === 0 || new Date(m.createdAt).getTime() - new Date(activeMessages[idx-1].createdAt).getTime() > 5 * 60000;
+                  const prevMsg = activeMessages[idx-1];
+                  const showTime = idx === 0 || (prevMsg && new Date(m.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() > 5 * 60000);
                   return (
                     <div key={m.id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
                       {showTime && (

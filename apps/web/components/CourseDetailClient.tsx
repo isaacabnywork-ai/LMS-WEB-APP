@@ -267,7 +267,9 @@ export default function CourseDetailClient({
   course, 
   onEnroll,
   onCreateDiscussion,
-  onReplyDiscussion
+  onReplyDiscussion,
+  onSubmitReview,
+  onDeleteReview
 }: { 
   course: CourseDetailProps;
   onEnroll: () => Promise<void>;

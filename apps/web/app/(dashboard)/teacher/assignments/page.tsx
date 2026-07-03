@@ -35,7 +35,7 @@ export default async function TeacherAssignmentsPage() {
       id: a.id,
       title: a.title,
       course: a.course.title,
-      courseColor: COURSE_COLORS[i % COURSE_COLORS.length],
+      courseColor: COURSE_COLORS[i % COURSE_COLORS.length] || "indigo",
       dueDate: new Date(a.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Mocking due date as 7 days from creation
       totalStudents,
       submitted,
@@ -45,7 +45,7 @@ export default async function TeacherAssignmentsPage() {
         id: s.user.id,
         name: s.user.name || "Unknown",
         avatar: (s.user.name || "U").substring(0, 2).toUpperCase(),
-        submittedAt: new Date(s.createdAt).toLocaleDateString(),
+        submittedAt: new Date(s.submittedAt).toLocaleDateString(),
         score: s.score,
         submissionId: s.id
       }))

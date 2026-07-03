@@ -73,7 +73,7 @@ export function StudentAssignmentsClient({ assignments }: { assignments: Student
           </div>
         )}
         {filtered.map((assignment, idx) => {
-          const st = statusConfig[assignment.status];
+          const st = (statusConfig[assignment.status] || statusConfig.future) as { label: string; color: string; bg: string };
           return (
             <div
               key={assignment.id}

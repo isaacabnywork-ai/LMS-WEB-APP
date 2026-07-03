@@ -75,3 +75,28 @@ export async function updateUserRole(userId: string, newRole: string) {
   revalidatePath("/admin/dashboard");
   return { success: true };
 }
+
+export async function publishAnnouncement(title: string, content: string) {
+  const admin = await requireAdmin();
+
+  // Since courseId is required in the database schema, find the first course to associate the announcement with
+  const course = await prisma.course.findFirst();
+  if (!course) {
+    throw new Error("No course available to publish announcement to.");
+  }
+
+  const announcement = await prisma.announcement.create({
+    data: {
+      title,
+      content,
+      courseId: course.id,
+      authorId: admin.id,
+    }
+  });
+
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/student/dashboard");
+  revalidatePath("/teacher/dashboard");
+  return { success: true, announcement };
+}
+

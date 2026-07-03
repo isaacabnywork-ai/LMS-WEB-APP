@@ -1,10 +1,10 @@
-import { getPlatformStats } from "@/app/actions/admin";
+import { getAdminStats } from "@/app/actions/admin";
 import { EngagementChart } from "@/components/AdminCharts";
 import { AnnouncementPublisher } from "@/components/AnnouncementPublisher";
 import { Users, BookOpen, GraduationCap, FileText } from "lucide-react";
 
 export default async function AdminDashboard() {
-  const stats = await getPlatformStats();
+  const stats = await getAdminStats();
 
   return (
     <div className="space-y-6">

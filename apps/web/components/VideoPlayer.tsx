@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import ReactPlayer from "react-player";
 
+const Player = ReactPlayer as any;
+
 interface VideoPlayerProps {
   url: string;
   onProgress?: (state: { playedSeconds: number; played: number; loadedSeconds: number; loaded: number }) => void;
@@ -13,7 +15,7 @@ export default function VideoPlayer({ url, onProgress, onEnded }: VideoPlayerPro
   const [playing, setPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [isClient, setIsClient] = useState(false);
-  const playerRef = useRef<ReactPlayer>(null);
+  const playerRef = useRef<any>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -23,7 +25,7 @@ export default function VideoPlayer({ url, onProgress, onEnded }: VideoPlayerPro
 
   return (
     <div className="relative w-full rounded-xl overflow-hidden bg-black aspect-video shadow-2xl">
-      <ReactPlayer
+      <Player
         ref={playerRef}
         url={url}
         width="100%"

@@ -26,7 +26,10 @@ export default async function LearnRootPage({
     }
   });
 
-  if (!course || course.modules.length === 0 || course.modules[0].lessons.length === 0) {
+  const firstModule = course?.modules[0];
+  const firstLesson = firstModule?.lessons[0];
+
+  if (!course || !firstModule || !firstLesson) {
     return (
       <div className="flex items-center justify-center h-full w-full p-8 text-center animate-slide-up">
         <div>
@@ -40,6 +43,6 @@ export default async function LearnRootPage({
     );
   }
 
-  const firstLessonId = course.modules[0].lessons[0].id;
+  const firstLessonId = firstLesson.id;
   redirect(`/learn/${courseId}/lessons/${firstLessonId}`);
 }

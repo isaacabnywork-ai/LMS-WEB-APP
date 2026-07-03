@@ -74,7 +74,7 @@ export default function StudentQuizzesClient({ quizzes }: { quizzes: StudentQuiz
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {filtered.map((quiz, idx) => {
-          const st = statusConfig[quiz.status];
+          const st = (statusConfig[quiz.status] || statusConfig.available) as { label: string; color: string; bg: string; icon: string };
           const scorePercent = quiz.score !== undefined ? Math.round((quiz.score / quiz.maxScore!) * 100) : null;
 
           return (

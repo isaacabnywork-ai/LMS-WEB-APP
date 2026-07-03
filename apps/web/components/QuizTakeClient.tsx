@@ -24,7 +24,7 @@ export default function QuizTakeClient({ quiz, questions }: { quiz: QuizInfo; qu
 
   // We are using a map of questionId -> selectedOption (string value)
   const currentQ = questions[currentQuestion];
-  const selectedAnswer = answers[currentQ?.id] || null;
+  const selectedAnswer = currentQ ? (answers[currentQ.id] || null) : null;
 
   const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
@@ -33,7 +33,9 @@ export default function QuizTakeClient({ quiz, questions }: { quiz: QuizInfo; qu
   };
 
   const handleSelect = (option: string) => {
-    setAnswers(prev => ({ ...prev, [currentQ.id]: option }));
+    if (currentQ) {
+      setAnswers(prev => ({ ...prev, [currentQ.id]: option }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -79,12 +81,12 @@ export default function QuizTakeClient({ quiz, questions }: { quiz: QuizInfo; qu
         <div className="mb-8 mt-4">
           <span className="text-teal-600 dark:text-teal-400 font-bold tracking-widest text-sm uppercase">Question {currentQuestion + 1} of {questions.length}</span>
           <h2 className="text-2xl font-semibold mt-4 text-foreground leading-snug">
-            {currentQ.text}
+            {currentQ?.text || ""}
           </h2>
         </div>
 
         <div className="space-y-4">
-          {currentQ.options.map((option, index) => (
+          {currentQ?.options?.map((option, index) => (
             <div
               key={index}
               onClick={() => handleSelect(option)}

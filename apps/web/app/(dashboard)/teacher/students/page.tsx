@@ -64,7 +64,7 @@ export default async function TeacherStudentsPage() {
       progress,
       lastActive: new Date().toISOString(), // Mock last active
       status,
-      avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length]
+      avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length] || "from-violet-500 to-purple-600"
     };
   });
 

@@ -31,7 +31,10 @@ export default function CreateQuizClient({ courses }: { courses: { id: string; t
 
   const updateOption = (qIdx: number, oIdx: number, val: string) => {
     const newQs = [...questions];
-    newQs[qIdx].options[oIdx] = val;
+    const q = newQs[qIdx];
+    if (q && q.options) {
+      q.options[oIdx] = val;
+    }
     setQuestions(newQs);
   };
 
@@ -42,6 +45,7 @@ export default function CreateQuizClient({ courses }: { courses: { id: string; t
     }
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
+      if (!q) continue;
       if (!q.text.trim() || q.options.some(o => !o.trim())) {
         setError(`Question ${i + 1} is missing text or has empty options.`);
         return;
@@ -56,7 +60,7 @@ export default function CreateQuizClient({ courses }: { courses: { id: string; t
         text: q.text,
         type: "mcq",
         options: JSON.stringify(q.options),
-        correctAnswer: q.options[q.correctIndex],
+        correctAnswer: q.options[q.correctIndex] || "",
         points: q.points
       }));
 
