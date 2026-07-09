@@ -1,27 +1,60 @@
 import React from "react";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { enrollInCourse } from "@/app/actions/student";
+import { moodle } from "@/lib/moodle/client";
 
 export default async function StudentCatalog() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/");
+  if (!session?.user?.id || !session.user.moodleToken) redirect("/");
 
-  // Fetch all published courses
-  const allCourses = await prisma.course.findMany({
-    where: { status: "published" },
-    include: { instructor: true }
+  // Fetch all courses from Moodle (except site course ID 1)
+  const coursesResponse = await moodle.call<any>('core_course_get_courses_by_field', {}, { cache: 'no-store' }).catch(() => ({ courses: [] }));
+  const allMoodleCourses = coursesResponse.courses || [];
+  
+  const allCourses = allMoodleCourses.filter((c: any) => c.id !== 1).map((c: any) => {
+    // Moodle stores uploaded course images in overviewfiles
+    let imageUrl = c.courseimage;
+    if (c.overviewfiles && c.overviewfiles.length > 0) {
+      imageUrl = c.overviewfiles[0].fileurl;
+    }
+    
+    // To view Moodle files outside of Moodle, we must use webservice/pluginfile.php + token
+    if (imageUrl) {
+      const moodleBaseUrl = process.env.MOODLE_URL || "http://localhost:8080";
+      try {
+        const urlObj = new URL(imageUrl);
+        const baseObj = new URL(moodleBaseUrl);
+        urlObj.port = baseObj.port;
+        urlObj.hostname = baseObj.hostname;
+        urlObj.protocol = baseObj.protocol;
+        imageUrl = urlObj.toString();
+      } catch (e) {}
+
+      if (imageUrl.includes('pluginfile.php') && !imageUrl.includes('webservice/pluginfile.php')) {
+        imageUrl = imageUrl.replace('pluginfile.php', 'webservice/pluginfile.php');
+      }
+      if (imageUrl.includes('pluginfile.php') && !imageUrl.includes('token=')) {
+        imageUrl += (imageUrl.includes('?') ? '&' : '?') + 'token=' + session.user.moodleToken;
+      }
+    }
+
+    return {
+      id: String(c.id),
+      title: c.fullname,
+      category: "General", // Could fetch category name via core_course_get_categories
+      thumbnailUrl: imageUrl || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80",
+      instructor: { name: "Instructor" } // Moodle courses generally require a separate capability check for teachers
+    };
   });
 
   // Fetch student's current enrolments
-  const enrolments = await prisma.enrolment.findMany({
-    where: { userId: session.user.id },
-    select: { courseId: true }
-  });
+  const enrolments = await moodle.call<any[]>('core_enrol_get_users_courses', {
+    userid: session.user.id
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
   
-  const enrolledCourseIds = new Set(enrolments.map(e => e.courseId));
+  const enrolledCourseIds = new Set(enrolments.map(e => String(e.id)));
 
   return (
     <div className="w-full animate-slide-up space-y-6">

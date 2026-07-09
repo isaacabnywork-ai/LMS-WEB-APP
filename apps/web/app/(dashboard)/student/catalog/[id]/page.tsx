@@ -1,141 +1,117 @@
 import React from "react";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import CourseDetailClient, { CourseDetailProps } from "@/components/CourseDetailClient";
 import { enrollInCourse, submitReview, deleteReview } from "@/app/actions/student";
 import { createDiscussion, replyDiscussion } from "@/app/actions/course";
+import { moodle } from "@/lib/moodle/client";
 
 export default async function CatalogCourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/");
+  if (!session?.user?.id || !session.user.moodleToken) redirect("/");
 
   const resolvedParams = await params;
   const courseId = resolvedParams.id;
 
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    include: {
-      instructor: true,
-      modules: {
-        orderBy: { position: "asc" },
-        include: {
-          lessons: {
-            orderBy: { position: "asc" },
-          }
-        }
-      },
-      enrolments: true,
-      discussions: {
-        include: {
-          author: true,
-          replies: { include: { author: true }, orderBy: { createdAt: "asc" } }
-        },
-        orderBy: { createdAt: "desc" }
-      },
-      reviews: {
-        include: { user: true },
-        orderBy: { createdAt: "desc" }
-      }
-    }
-  });
-
+  // 1. Fetch Course Details from Moodle
+  const coursesResponse = await moodle.call<any>('core_course_get_courses_by_field', {
+    field: 'id',
+    value: courseId
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => ({ courses: [] }));
+  
+  const course = coursesResponse.courses?.[0];
   if (!course) redirect("/student/catalog");
 
-  // Check enrollment
-  const enrolment = course.enrolments.find(e => e.userId === session.user.id);
+  // 2. Fetch Course Contents (Sections and Modules)
+  const contents = await moodle.call<any[]>('core_course_get_contents', {
+    courseid: courseId
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
+
+  // 3. Check Enrollment Status & Progress
+  const enrolments = await moodle.call<any[]>('core_enrol_get_users_courses', {
+    userid: session.user.id
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
+  
+  const enrolment = enrolments.find((e: any) => String(e.id) === String(courseId));
   const isEnrolled = !!enrolment;
   const progress = enrolment?.progress || 0;
 
-  // Check which lessons are completed
-  const completedProgress = await prisma.lessonProgress.findMany({
-    where: {
-      userId: session.user.id,
-      lesson: { module: { courseId: course.id } },
-      isCompleted: true
-    },
-    select: { lessonId: true }
-  });
-  const completedLessonIds = new Set(completedProgress.map(p => p.lessonId));
+  // 4. Map Moodle Sections to UI Modules
+  const mappedModules = contents
+    .filter((section: any) => section.name && section.modules.length > 0) // Skip empty sections
+    .map((section: any) => ({
+      id: String(section.id),
+      title: section.name,
+      duration: `${section.modules.length * 15}m`, // Mock duration based on module count
+      lessons: section.modules.map((mod: any) => {
+        // Map Moodle module names to our UI types (Video, PDF, Quiz, Assignment)
+        let type = "Page";
+        if (mod.modname === "assign") type = "Assignment";
+        if (mod.modname === "quiz") type = "Quiz";
+        if (mod.modname === "resource") type = "PDF";
+        if (mod.modname === "url" || mod.modname === "hvp" || mod.modname === "scorm") type = "Video";
 
-  const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
-  const duration = `${Math.floor(totalLessons * 25 / 60)}h ${totalLessons * 25 % 60}m`; // Mock duration
+        return {
+          id: String(mod.id),
+          title: mod.name,
+          type: type,
+          duration: "15m",
+          completed: mod.completiondata?.state === 1 || mod.completiondata?.state === 2 // 1: complete, 2: complete pass
+        };
+      })
+    }));
 
-  const averageRating = course.reviews.length > 0
-    ? course.reviews.reduce((acc, r) => acc + r.rating, 0) / course.reviews.length
-    : 0;
+  const totalLessons = mappedModules.reduce((acc, m) => acc + m.lessons.length, 0);
+  const duration = `${Math.floor(totalLessons * 15 / 60)}h ${totalLessons * 15 % 60}m`;
+
+  // Extract actual image url
+  let imageUrl = course.courseimage;
+  if (course.overviewfiles && course.overviewfiles.length > 0) {
+    imageUrl = course.overviewfiles[0].fileurl;
+  }
+  
+  // Format for external viewing
+  if (imageUrl) {
+    if (imageUrl.includes('pluginfile.php') && !imageUrl.includes('webservice/pluginfile.php')) {
+      imageUrl = imageUrl.replace('pluginfile.php', 'webservice/pluginfile.php');
+    }
+    if (imageUrl.includes('pluginfile.php') && !imageUrl.includes('token=')) {
+      imageUrl += (imageUrl.includes('?') ? '&' : '?') + 'token=' + session.user.moodleToken;
+    }
+  }
 
   const courseProps: CourseDetailProps = {
-    id: course.id,
-    title: course.title,
-    category: course.category,
-    description: course.description,
-    thumbnailUrl: course.thumbnailUrl,
+    id: String(course.id),
+    title: course.fullname,
+    category: "General", // Could be fetched via core_course_get_categories
+    description: course.summary?.replace(/(<([^>]+)>)/gi, "") || "No description provided.",
+    thumbnailUrl: imageUrl || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80",
     instructor: {
-      name: course.instructor.name,
-      avatar: course.instructor.name?.[0]?.toUpperCase() || "T",
+      name: "Instructor", // Usually fetched via core_enrol_get_enrolled_users filtering by role
+      avatar: "I",
       role: "Instructor"
     },
-    rating: parseFloat(averageRating.toFixed(1)),
-    reviewCount: course.reviews.length,
-    enrolledCount: course.enrolments.length,
+    rating: 0,
+    reviewCount: 0,
+    enrolledCount: course.enrolledusercount || 0,
     duration: duration,
-    lastUpdated: course.updatedAt.toLocaleDateString(),
+    lastUpdated: new Date((course.timemodified || 0) * 1000).toLocaleDateString(),
     level: "All Levels",
     language: "English",
     certificate: true,
     progress: progress,
     isEnrolled: isEnrolled,
-    skills: [course.category || "General"],
-    modules: course.modules.map(m => ({
-      id: m.id,
-      title: m.title,
-      duration: `${m.lessons.length * 25}m`,
-      lessons: m.lessons.map(l => ({
-        id: l.id,
-        title: l.title,
-        type: l.type,
-        duration: "25m",
-        completed: completedLessonIds.has(l.id)
-      }))
-    })),
-    discussions: course.discussions.map(d => ({
-      id: d.id,
-      title: d.title,
-      content: d.content,
-      author: {
-        name: d.author.name || "Student",
-        avatar: d.author.name?.[0]?.toUpperCase() || "S"
-      },
-      createdAt: d.createdAt.toLocaleDateString(),
-      replies: d.replies.map(r => ({
-        id: r.id,
-        content: r.content,
-        author: {
-          name: r.author.name || "Student",
-          avatar: r.author.name?.[0]?.toUpperCase() || "S"
-        },
-        createdAt: r.createdAt.toLocaleDateString()
-      }))
-    })),
-    reviews: course.reviews.map(r => ({
-      id: r.id,
-      rating: r.rating,
-      comment: r.comment || undefined,
-      createdAt: r.createdAt.toLocaleDateString(),
-      author: {
-        id: r.user.id,
-        name: r.user.name || "Student",
-        avatar: r.user.name?.[0]?.toUpperCase() || "S"
-      }
-    })),
+    skills: ["General"],
+    modules: mappedModules,
+    discussions: [], // To be migrated in Phase 10
+    reviews: [], // App-specific metadata
     currentUserId: session.user.id
   };
 
   const enrollAction = async () => {
     "use server";
     await enrollInCourse(courseId);
-    redirect(`/learn/${courseId}`);
+    redirect(`/student/courses/${courseId}`);
   };
 
   const createDiscussionAction = async (title: string, content: string) => {

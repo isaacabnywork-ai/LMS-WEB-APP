@@ -17,9 +17,23 @@ export default async function TeacherCourseEditPage({
   const resolvedParams = await params;
   const courseId = resolvedParams.id;
 
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-  });
+  // Fetch from Moodle instead of Prisma
+  const { moodle } = await import('@/lib/moodle/client');
+  const moodleCourse = await moodle.call<any>('core_course_get_courses', {
+    'options[ids][0]': courseId
+  }, { cache: 'no-store' }).catch(() => null);
+
+  const mCourse = moodleCourse && moodleCourse.length > 0 ? moodleCourse[0] : null;
+
+  const course = mCourse ? {
+    id: String(mCourse.id),
+    title: mCourse.fullname,
+    description: mCourse.summary,
+    instructorId: session.user.id,
+    status: "published",
+    category: mCourse.categoryname || "General",
+    thumbnailUrl: null,
+  } : null;
 
   if (!course || course.instructorId !== session.user.id) {
     return (

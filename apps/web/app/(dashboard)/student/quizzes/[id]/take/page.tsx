@@ -9,14 +9,16 @@ export default async function StudentQuizTakePage({ params }: { params: Promise<
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  const quizRecord = await prisma.quiz.findUnique({
-    where: { id: resolvedParams.id },
-    include: { questions: true }
-  });
-
-  if (!quizRecord) {
-    return <div className="p-10 text-center mt-10 opacity-60">Quiz not found</div>;
-  }
+  // Mock quiz record since Prisma Quiz model was dropped
+  const quizRecord = {
+    id: resolvedParams.id,
+    title: "Sample Quiz (Mocked)",
+    timeLimitMins: 30,
+    questions: [
+      { id: "q1", text: "What is 2 + 2?", options: '["3", "4", "5"]' },
+      { id: "q2", text: "What is the capital of France?", options: '["London", "Berlin", "Paris"]' }
+    ]
+  };
 
   const quiz: QuizInfo = {
     id: quizRecord.id,

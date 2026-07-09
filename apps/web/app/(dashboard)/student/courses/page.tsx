@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { moodle } from "@/lib/moodle/client";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
@@ -11,16 +11,36 @@ export default async function StudentCourses({ searchParams }: { searchParams: P
   const { tab } = await searchParams;
   const activeTab = tab || "all";
 
-  // Fetch student's enrolments
-  const enrolments = await prisma.enrolment.findMany({
-    where: { userId: session.user.id },
-    include: { course: true }
-  });
+  // Fetch student's enrolments from Moodle
+  const moodleCourses = await moodle.call<any[]>('core_enrol_get_users_courses', {
+    userid: session.user.id
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
 
-  const courses = enrolments.map(e => ({
-    ...e.course,
-    progress: e.progress
-  }));
+  const courses = moodleCourses.map((c: any) => {
+    // Moodle stores uploaded course images in overviewfiles
+    let imageUrl = c.courseimage;
+    if (c.overviewfiles && c.overviewfiles.length > 0) {
+      imageUrl = c.overviewfiles[0].fileurl;
+    }
+    
+    // To view Moodle files outside of Moodle, we must use webservice/pluginfile.php + token
+    if (imageUrl) {
+      if (imageUrl.includes('pluginfile.php') && !imageUrl.includes('webservice/pluginfile.php')) {
+        imageUrl = imageUrl.replace('pluginfile.php', 'webservice/pluginfile.php');
+      }
+      if (imageUrl.includes('pluginfile.php') && !imageUrl.includes('token=')) {
+        imageUrl += (imageUrl.includes('?') ? '&' : '?') + 'token=' + session.user.moodleToken;
+      }
+    }
+
+    return {
+      id: String(c.id),
+      title: c.fullname,
+      thumbnailUrl: imageUrl,
+      progress: c.progress || 0,
+      category: "Course" // Or fetch category from Moodle
+    };
+  });
 
   const tabs = [
     { id: "all", label: "All" },

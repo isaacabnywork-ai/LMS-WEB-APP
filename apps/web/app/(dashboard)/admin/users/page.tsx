@@ -1,5 +1,6 @@
 import { getAllUsers } from "@/app/actions/admin";
 import { UserRoleSelector } from "@/components/UserRoleSelector";
+import { DeleteUserButton } from "@/components/DeleteUserButton";
 import { Search } from "lucide-react";
 
 export default async function AdminUsersPage() {
@@ -33,6 +34,7 @@ export default async function AdminUsersPage() {
                 <th className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">Email</th>
                 <th className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">Joined</th>
                 <th className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">Role</th>
+                <th className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--card-border)]">
@@ -54,6 +56,9 @@ export default async function AdminUsersPage() {
                   </td>
                   <td className="px-6 py-4">
                     <UserRoleSelector userId={u.id} initialRole={u.role} />
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <DeleteUserButton userId={u.id} userName={u.name} />
                   </td>
                 </tr>
               ))}

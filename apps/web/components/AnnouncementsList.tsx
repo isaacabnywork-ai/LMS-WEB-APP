@@ -5,21 +5,8 @@ export async function AnnouncementsList() {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const announcements = await prisma.announcement.findMany({
-    where: {
-      course: {
-        enrolments: {
-          some: { userId: session.user.id }
-        }
-      }
-    },
-    include: {
-      course: { select: { title: true } },
-      author: { select: { name: true } }
-    },
-    orderBy: { createdAt: "desc" },
-    take: 3
-  });
+  // TODO: Phase 10 - Fetch announcements from Moodle (e.g., via site news forum)
+  const announcements: any[] = [];
 
   if (announcements.length === 0) return null;
 

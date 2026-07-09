@@ -11,11 +11,14 @@ declare module "next-auth" {
       id: string;
       /** The user's role. */
       role: string;
+      /** Moodle Web Service Token */
+      moodleToken?: string;
     } & DefaultSession["user"]
   }
 
   interface User extends DefaultUser {
     role: string;
+    moodleToken?: string;
   }
 }
 
@@ -25,5 +28,6 @@ declare module "next-auth/jwt" {
     /** The user's role. */
     role?: string;
     id?: string;
+    moodleToken?: string;
   }
 }

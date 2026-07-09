@@ -1,8 +1,8 @@
 import React from "react";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { CourseSidebarClient } from "./CourseSidebarClient";
+import { moodle } from "@/lib/moodle/client";
 
 export default async function LearnLayout({
   children,
@@ -17,61 +17,59 @@ export default async function LearnLayout({
   const resolvedParams = await params;
   const courseId = resolvedParams.courseId;
 
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    include: {
-      modules: {
-        orderBy: { position: "asc" },
-        include: {
-          lessons: {
-            orderBy: { position: "asc" },
-            select: { id: true, title: true, type: true, position: true }
-          },
-          assignments: {
-            orderBy: { position: "asc" },
-            select: { id: true, title: true, position: true }
-          },
-          quizzes: {
-            orderBy: { position: "asc" },
-            select: { id: true, title: true, position: true }
-          }
-        }
-      }
-    }
-  });
-
+  // Fetch course details from Moodle
+  const coursesResponse = await moodle.call<any>('core_course_get_courses_by_field', {
+    field: 'id',
+    value: courseId
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => ({ courses: [] }));
+  
+  const course = coursesResponse.courses?.[0];
   if (!course) {
     redirect("/student/courses");
   }
 
-  // Fetch completed lessons for this student
-  const completedProgress = await prisma.lessonProgress.findMany({
-    where: {
-      userId: session.user.id,
-      lesson: {
-        module: {
-          courseId: course.id
+  // Fetch course contents (Sections and Modules)
+  const contents = await moodle.call<any[]>('core_course_get_contents', {
+    courseid: courseId
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
+
+  const completedLessonIds: string[] = [];
+
+  const modulesWithItems = contents
+    .filter((section: any) => section.name && section.modules.length > 0)
+    .map((section: any, index: number) => ({
+      id: String(section.id),
+      title: section.name,
+      position: index,
+      items: section.modules.map((mod: any, modIndex: number) => {
+        let type = "PAGE";
+        if (mod.modname === "assign") type = "ASSIGNMENT";
+        if (mod.modname === "quiz") type = "EXAM";
+        if (mod.modname === "resource") type = "PDF";
+        if (mod.modname === "folder") type = "FOLDER";
+        if (mod.modname === "url") type = "VIDEO"; // usually youtube links
+        if (mod.modname === "hvp" || mod.modname === "scorm") type = "PAGE"; // Interactive Moodle modules rendered in iframe
+
+        // Track completed items
+        if (mod.completiondata?.state === 1 || mod.completiondata?.state === 2) {
+          completedLessonIds.push(String(mod.id));
         }
-      },
-      isCompleted: true
-    },
-    select: { lessonId: true }
-  });
 
-  const completedLessonIds = completedProgress.map(p => p.lessonId);
+        return {
+          id: String(mod.id),
+          title: mod.name,
+          type: type,
+          position: modIndex,
+          uservisible: mod.uservisible !== false
+        };
+      })
+    }));
 
-  const modulesWithItems = course.modules.map(m => ({
-    id: m.id,
-    title: m.title,
-    position: m.position,
-    items: [
-      ...m.lessons.map(l => ({ id: l.id, title: l.title, type: l.type.toUpperCase(), position: l.position })),
-      ...m.assignments.map(a => ({ id: a.id, title: a.title, type: "ASSIGNMENT", position: a.position })),
-      ...m.quizzes.map(q => ({ id: q.id, title: q.title, type: "EXAM", position: q.position }))
-    ].sort((a, b) => a.position - b.position)
-  }));
-
-  const courseForSidebar = { ...course, modules: modulesWithItems };
+  const courseForSidebar = { 
+    id: String(course.id), 
+    title: course.fullname,
+    modules: modulesWithItems 
+  };
 
   return (
     <div className="flex flex-col lg:flex-row min-h-[100dvh] bg-background">

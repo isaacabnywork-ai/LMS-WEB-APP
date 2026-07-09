@@ -383,7 +383,7 @@ export default function CourseDetailClient({
           {/* enroll / continue button */}
           <div className="sm:ml-4">
             {course.isEnrolled ? (
-              <Link href={`/learn/${course.id}`} className="inline-block w-full sm:w-auto px-7 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-sm shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 transition-all active:scale-95 text-center">
+              <Link href={`/student/courses/${course.id}/learn`} className="inline-block w-full sm:w-auto px-7 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-sm shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 transition-all active:scale-95 text-center">
                 Continue Learning
               </Link>
             ) : (
@@ -681,7 +681,10 @@ export default function CourseDetailClient({
 
               {/* CTA */}
               {course.isEnrolled ? (
-                <Link href={`/learn/${course.id}`} className="block w-full text-center py-3 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-sm shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 transition-all active:scale-95 mt-1">
+                <Link
+                    href={`/student/courses/${course.id}/learn`}
+                    className="block w-full text-center py-3 rounded-xl bg-teal-500 hover:bg-teal-600 text-white font-bold text-sm shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 transition-all active:scale-95 mt-1"
+                  >
                   Continue Learning
                 </Link>
               ) : (

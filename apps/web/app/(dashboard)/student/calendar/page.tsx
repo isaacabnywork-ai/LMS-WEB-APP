@@ -1,29 +1,14 @@
 import React from "react";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { moodle } from "@/lib/moodle/client";
 
 export default async function CalendarPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/");
+  if (!session?.user?.id || !(session.user as any).moodleToken) redirect("/");
 
-  // Fetch enrolments with assignments and quizzes
-  const enrolments = await prisma.enrolment.findMany({
-    where: { userId: session.user.id },
-    include: {
-      course: {
-        include: {
-          assignments: {
-            where: { dueAt: { not: null } }
-          },
-          quizzes: {
-            where: { endAt: { not: null } }
-          }
-        }
-      }
-    }
-  });
+  const moodleToken = (session.user as any).moodleToken;
 
   // Extract and sort events
   const events: Array<{
@@ -35,33 +20,31 @@ export default async function CalendarPage() {
     url: string;
   }> = [];
 
-  enrolments.forEach(enrolment => {
-    enrolment.course.assignments.forEach(assignment => {
-      if (assignment.dueAt) {
-        events.push({
-          id: `a_${assignment.id}`,
-          title: assignment.title,
-          courseName: enrolment.course.title,
-          type: "Assignment",
-          date: assignment.dueAt,
-          url: `/student/assignments/${assignment.id}/submit`
-        });
-      }
-    });
+  try {
+    // Fetch upcoming events from Moodle
+    const calendarResponse = await moodle.call<any>('core_calendar_get_action_events_by_timesort', {
+      timesortfrom: Math.floor(Date.now() / 1000)
+    }, { cache: 'no-store' }, moodleToken);
 
-    enrolment.course.quizzes.forEach(quiz => {
-      if (quiz.endAt) {
-        events.push({
-          id: `q_${quiz.id}`,
-          title: quiz.title,
-          courseName: enrolment.course.title,
-          type: "Quiz",
-          date: quiz.endAt,
-          url: `/student/quizzes/${quiz.id}/take`
-        });
-      }
-    });
-  });
+    if (calendarResponse.events) {
+      calendarResponse.events.forEach((ev: any) => {
+        if (ev.modulename === 'assign' || ev.modulename === 'quiz') {
+          events.push({
+            id: String(ev.id),
+            title: ev.name,
+            courseName: ev.course?.fullname || "Course",
+            type: ev.modulename === 'assign' ? "Assignment" : "Quiz",
+            date: new Date(ev.timestart * 1000),
+            url: ev.modulename === 'assign' 
+              ? `/student/assignments`
+              : `/student/quizzes`
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Failed to fetch Moodle calendar events:", error);
+  }
 
   events.sort((a, b) => a.date.getTime() - b.date.getTime());
 

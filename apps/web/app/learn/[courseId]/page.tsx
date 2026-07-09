@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { moodle } from "@/lib/moodle/client";
 
 export default async function LearnRootPage({
   params
@@ -9,27 +10,17 @@ export default async function LearnRootPage({
   const resolvedParams = await params;
   const courseId = resolvedParams.courseId;
 
-  // Find the first lesson of the first module
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    include: {
-      modules: {
-        orderBy: { position: "asc" },
-        include: {
-          lessons: {
-            orderBy: { position: "asc" },
-            take: 1
-          }
-        },
-        take: 1
-      }
-    }
-  });
+  const session = await auth();
+  if (!session?.user?.moodleToken) redirect("/login");
 
-  const firstModule = course?.modules[0];
-  const firstLesson = firstModule?.lessons[0];
+  const contents = await moodle.call<any[]>('core_course_get_contents', {
+    courseid: courseId
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
 
-  if (!course || !firstModule || !firstLesson) {
+  const firstModule = contents.find((section: any) => section.modules.length > 0);
+  const firstLesson = firstModule?.modules[0];
+
+  if (!contents || !firstModule || !firstLesson) {
     return (
       <div className="flex items-center justify-center h-full w-full p-8 text-center animate-slide-up">
         <div>

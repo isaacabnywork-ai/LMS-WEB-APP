@@ -1,47 +1,61 @@
 import React from 'react';
-import { prisma } from '@/lib/prisma';
+
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import { moodle } from '@/lib/moodle/client';
 
 import { AnnouncementsList } from '@/components/AnnouncementsList';
 
 export default async function StudentDashboard() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/");
+  if (!session?.user?.id || !session.user.moodleToken) redirect("/");
 
-  // Fetch student's enrolments
-  const enrolments = await prisma.enrolment.findMany({
-    where: { userId: session.user.id },
-    include: { course: { include: { instructor: true } } }
-  });
+  // Fetch student's enrolments from Moodle
+  const moodleCourses = await moodle.call<any[]>('core_enrol_get_users_courses', {
+    userid: session.user.id
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
 
-  const enrolledCount = enrolments.length;
-  const completedCount = enrolments.filter(e => e.progress === 100).length;
-  const myCourses = enrolments.map(e => ({
-    ...e.course,
-    progress: e.progress
+  const enrolledCount = moodleCourses.length || 0;
+  
+  const myCourses = moodleCourses.map((c: any) => ({
+    id: String(c.id),
+    title: c.fullname,
+    thumbnailUrl: c.courseimage || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&q=80",
+    instructor: { name: "Instructor" }, // In a full implementation, we might fetch course contacts
+    progress: c.progress || 0
   }));
 
-  const courseIds = enrolments.map(e => e.courseId);
-  const now = new Date();
+  const completedCount = myCourses.filter(c => c.progress === 100).length;
 
-  // Fetch upcoming assignments
-  const upcomingAssignments = await prisma.assignment.findMany({
-    where: { 
-      courseId: { in: courseIds }, 
-      dueAt: { gt: now },
-      submissions: { none: { userId: session.user.id } }
-    },
-    include: { course: { select: { title: true } } },
-    orderBy: { dueAt: 'asc' },
-    take: 4
-  });
-
-  // Calculate completed & due activities
-  const completedActivities = await prisma.submission.count({
-    where: { userId: session.user.id }
-  });
+  // Fetch upcoming assignments from Moodle
+  const assignmentsData = await moodle.call<any>('mod_assign_get_assignments', {}, { cache: 'no-store' }, session.user.moodleToken).catch(() => ({ courses: [] }));
+  
+  const nowInSeconds = Date.now() / 1000;
+  let allAssignments: any[] = [];
+  
+  if (assignmentsData.courses) {
+    assignmentsData.courses.forEach((c: any) => {
+      if (c.assignments) {
+        c.assignments.forEach((a: any) => {
+           if (a.duedate > nowInSeconds) {
+             allAssignments.push({
+               id: String(a.id),
+               title: a.name,
+               course: { title: c.fullname },
+               dueAt: new Date(a.duedate * 1000)
+             });
+           }
+        });
+      }
+    });
+  }
+  
+  allAssignments.sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
+  const upcomingAssignments = allAssignments.slice(0, 4);
   const activitiesDue = upcomingAssignments.length;
+
+  // Fetch completed activities (placeholder or use gradebook API)
+  const completedActivities = 0;
 
   return (
     <div className="animate-slide-up space-y-6 w-full">

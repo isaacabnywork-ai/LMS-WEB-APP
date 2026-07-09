@@ -8,36 +8,11 @@ export default async function TeacherStudentsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  // Fetch all courses taught by this teacher
-  const courses = await prisma.course.findMany({
-    where: { instructorId: session.user.id },
-    select: { id: true }
-  });
+  // Fetch all courses taught by this teacher from Moodle (mocked for now)
+  // In a real implementation:
+  // const courses = await moodle.call('core_enrol_get_users_courses', { userid: session.user.id });
+  // Then core_enrol_get_enrolled_users for each course to get students.
   
-  const courseIds = courses.map(c => c.id);
-
-  // Fetch all students enrolled in these courses
-  const enrolments = await prisma.enrolment.findMany({
-    where: { courseId: { in: courseIds } },
-    include: {
-      user: {
-        include: {
-          enrolments: true,
-          submissions: { select: { score: true } },
-          quizAttempts: { select: { score: true } }
-        }
-      }
-    }
-  });
-
-  // Group by student
-  const studentMap = new Map<string, typeof enrolments[0]['user']>();
-  for (const e of enrolments) {
-    if (!studentMap.has(e.userId)) {
-      studentMap.set(e.userId, e.user);
-    }
-  }
-
   const AVATAR_COLORS = [
     "from-violet-500 to-purple-600",
     "from-rose-500 to-pink-600",
@@ -47,26 +22,39 @@ export default async function TeacherStudentsPage() {
     "from-indigo-500 to-blue-600"
   ];
 
-  const studentsData: Student[] = Array.from(studentMap.values()).map((user, idx) => {
-    // Very simple mock logic for progress and status based on real grading counts
-    const totalGrades = user.submissions.filter(s => s.score !== null).length + user.quizAttempts.filter(q => q.score !== null).length;
-    const progress = Math.min(100, Math.max(0, totalGrades * 15 + 10)); // Just a mock visualization
-    
-    let status: "Active" | "At Risk" | "Completed" = "Active";
-    if (progress >= 100) status = "Completed";
-    else if (progress < 30) status = "At Risk";
-
-    return {
-      id: user.id,
-      name: user.name || "Unknown Student",
-      email: user.email || "",
-      coursesEnrolled: user.enrolments.length,
-      progress,
-      lastActive: new Date().toISOString(), // Mock last active
-      status,
-      avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length] || "from-violet-500 to-purple-600"
-    };
-  });
+  // Mocking the student list since Prisma models were dropped
+  const studentsData: Student[] = [
+    {
+      id: "3",
+      name: "student",
+      email: "student@edunova.com",
+      coursesEnrolled: 1,
+      progress: 45,
+      lastActive: new Date().toISOString(),
+      status: "Active",
+      avatarColor: AVATAR_COLORS[0]
+    },
+    {
+      id: "101",
+      name: "Alice Johnson",
+      email: "alice@example.com",
+      coursesEnrolled: 2,
+      progress: 90,
+      lastActive: new Date().toISOString(),
+      status: "Active",
+      avatarColor: AVATAR_COLORS[1]
+    },
+    {
+      id: "102",
+      name: "Bob Smith",
+      email: "bob@example.com",
+      coursesEnrolled: 1,
+      progress: 25,
+      lastActive: new Date().toISOString(),
+      status: "At Risk",
+      avatarColor: AVATAR_COLORS[2]
+    }
+  ];
 
   return <StudentsClient mockStudents={studentsData} />;
 }

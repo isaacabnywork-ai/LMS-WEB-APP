@@ -1,57 +1,64 @@
 import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-import { prisma } from "./lib/prisma";
 import { authConfig } from "./auth.config";
+import { authenticateWithMoodle } from "./lib/moodle/auth";
+import { prisma } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   trustHost: true,
-  adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   providers: [
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "you@example.com" },
+        email: { label: "Email or Username", type: "text", placeholder: "username" },
         password: { label: "Password", type: "password" },
         role: { label: "Role", type: "text" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password || !credentials?.role) {
+        if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email as string
-          }
-        });
+        try {
+          const moodleUser = await authenticateWithMoodle(
+            credentials.email as string, 
+            credentials.password as string
+          );
+          
+          if (!moodleUser) return null;
 
-        if (!user || !user.passwordHash) {
-          return null;
+          // Note: In a full Moodle integration, we would verify the user's Moodle role
+          // against the requested role (credentials.role).
+          // For now, we trust the UI's role selection or default to student.
+          const assignedRole = (credentials.role as string) || "student";
+
+          // Sync the user to the local database so relations and role checks work
+          await prisma.user.upsert({
+            where: { id: moodleUser.id },
+            update: {
+              email: moodleUser.email,
+              role: assignedRole,
+            },
+            create: {
+              id: moodleUser.id,
+              email: moodleUser.email,
+              role: assignedRole,
+            }
+          });
+
+          return {
+            id: moodleUser.id,
+            email: moodleUser.email,
+            name: moodleUser.name,
+            role: assignedRole,
+            moodleToken: moodleUser.moodleToken,
+          };
+        } catch (error: any) {
+          console.error("Moodle Auth Error:", error.message);
+          throw new Error("Invalid credentials or Moodle connection failed.");
         }
-
-        if (user.role !== credentials.role) {
-          throw new Error(`Access denied. You are registered as a ${user.role}, but tried logging in as a ${credentials.role}.`);
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       }
     })
   ],

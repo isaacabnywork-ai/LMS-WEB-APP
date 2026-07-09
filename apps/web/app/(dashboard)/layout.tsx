@@ -13,20 +13,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
-  // Fetch the latest user data from the database to keep Sidebar and Header synced
-  const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id }
-  });
-
-  if (!dbUser) {
-    redirect("/login");
-  }
-
   const user = {
     ...session.user,
-    name: dbUser.name,
-    image: dbUser.image,
-    role: dbUser.role
+    name: session.user.name || "Student",
+    image: session.user.image || null,
+    role: session.user.role || "STUDENT"
   };
 
   return (

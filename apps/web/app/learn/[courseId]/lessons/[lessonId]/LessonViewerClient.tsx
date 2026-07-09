@@ -94,6 +94,22 @@ export function LessonViewerClient({
       );
     }
 
+    if (type === "page" || type === "exam" || type === "assignment" || type === "quiz" || type === "folder") {
+      return (
+        <div className="w-full flex flex-col gap-4">
+          <div className="w-full min-h-[70vh] relative group">
+            <iframe 
+              src={lesson.contentUrl} 
+              className="w-full h-full min-h-[70vh] absolute top-0 left-0"
+              title={lesson.title}
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads allow-modals"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      );
+    }
+
     // Default for Links or Text
     return (
       <div className="w-full p-10 bg-black/5 dark:bg-white/5 rounded-2xl border border-foreground/10 text-center">
@@ -101,7 +117,7 @@ export function LessonViewerClient({
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
         </div>
         <h3 className="text-xl font-bold mb-2">External Resource</h3>
-        <p className="text-foreground/60 mb-6">This lesson contains an external link or resource.</p>
+        <p className="text-foreground/60 mb-6">This lesson contains an external link or resource that couldn't be embedded automatically.</p>
         <a href={lesson.contentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
           Open Resource
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>

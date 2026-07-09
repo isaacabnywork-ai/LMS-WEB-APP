@@ -115,14 +115,35 @@ export default async function TeacherCoursesPage({ searchParams }: { searchParam
   const { status } = await searchParams;
   const filterStatus = status || "all";
 
-  // Fetch from Prisma
-  const allCourses = await prisma.course.findMany({
-    where: { instructorId: session.user.id },
-    include: { 
-      _count: { select: { enrolments: true } },
-      reviews: { select: { rating: true } }
-    },
-    orderBy: { updatedAt: 'desc' }
+  // Fetch from Moodle instead of Prisma since Prisma Course model was dropped
+  const { moodle } = await import('@/lib/moodle/client');
+  const moodleCourses = await moodle.call<any[]>('core_enrol_get_users_courses', {
+    userid: session.user.id
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
+
+  const allCourses = moodleCourses.map((c: any) => {
+    let imageUrl = c.courseimage;
+    if (c.overviewfiles && c.overviewfiles.length > 0) {
+      imageUrl = c.overviewfiles[0].fileurl;
+      if (imageUrl.includes('pluginfile.php') && !imageUrl.includes('webservice/pluginfile.php')) {
+        imageUrl = imageUrl.replace('pluginfile.php', 'webservice/pluginfile.php');
+      }
+      if (imageUrl.includes('pluginfile.php') && !imageUrl.includes('token=')) {
+        imageUrl += (imageUrl.includes('?') ? '&' : '?') + 'token=' + session.user.moodleToken;
+      }
+    }
+
+    return {
+      id: String(c.id),
+      title: c.fullname,
+      description: c.summary,
+      thumbnailUrl: imageUrl,
+      status: "published", // Moodle courses that are visible are considered published here
+      category: c.categoryname || "General",
+      _count: { enrolments: c.enrolledusercount || 0 },
+      reviews: [], // Not supported in this Moodle mock yet
+      updatedAt: new Date(c.timeaccess ? c.timeaccess * 1000 : Date.now())
+    };
   });
 
   const filteredCourses = allCourses.filter(c => filterStatus === "all" || c.status === filterStatus);
@@ -135,7 +156,7 @@ export default async function TeacherCoursesPage({ searchParams }: { searchParam
   const draftCount = allCourses.length - publishedCount;
 
   allCourses.forEach(c => {
-    c.reviews.forEach(r => {
+    c.reviews.forEach((r: any) => {
       totalRatingSum += r.rating;
       totalReviews++;
     });

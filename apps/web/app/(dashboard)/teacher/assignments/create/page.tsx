@@ -8,11 +8,16 @@ export default async function TeacherAssignmentCreatePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  // Fetch teacher's courses
-  const courses = await prisma.course.findMany({
-    where: { instructorId: session.user.id },
-    select: { id: true, title: true }
-  });
+  // Fetch teacher's courses from Moodle
+  const { moodle } = await import('@/lib/moodle/client');
+  const moodleCourses = await moodle.call<any[]>('core_enrol_get_users_courses', {
+    userid: session.user.id
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
+
+  const courses = moodleCourses.map((c: any) => ({
+    id: String(c.id),
+    title: c.fullname
+  }));
 
   return (
     <div className="w-full max-w-4xl mx-auto animate-slide-up mt-10">

@@ -8,15 +8,8 @@ export default async function CertificatesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
 
-  const certificates = await prisma.certificate.findMany({
-    where: { userId: session.user.id },
-    include: {
-      course: {
-        include: { instructor: true }
-      }
-    },
-    orderBy: { issuedAt: "desc" }
-  });
+  // TODO: Phase 11 - Migrate Certificates to Moodle (mod_customcert)
+  const certificates: any[] = [];
 
   return (
     <div className="animate-slide-up space-y-8">

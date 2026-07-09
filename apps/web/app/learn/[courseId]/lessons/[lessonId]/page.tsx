@@ -1,8 +1,8 @@
 import React from "react";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { LessonViewerClient } from "./LessonViewerClient";
+import { moodle } from "@/lib/moodle/client";
 
 export default async function LessonPage({
   params
@@ -15,63 +15,67 @@ export default async function LessonPage({
   const resolvedParams = await params;
   const { courseId, lessonId } = resolvedParams;
 
-  // 1. Fetch the course with all modules and lessons to determine prev/next logic
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    include: {
-      modules: {
-        orderBy: { position: "asc" },
-        include: {
-          lessons: {
-            orderBy: { position: "asc" }
-          }
-        }
-      }
+  // 1. Fetch course contents from Moodle
+  const contents = await moodle.call<any[]>('core_course_get_contents', {
+    courseid: courseId
+  }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
+
+  if (!contents || contents.length === 0) redirect("/student/courses");
+
+  // Flatten modules (lessons) to easily find current, prev, next
+  const allModules: any[] = [];
+  contents.forEach((section: any) => {
+    if (section.modules && section.modules.length > 0) {
+      section.modules.forEach((mod: any) => {
+        allModules.push({
+          ...mod,
+          sectionName: section.name
+        });
+      });
     }
   });
 
-  if (!course) redirect("/student/courses");
-
-  // Flatten lessons to easily find current, prev, next
-  const allLessons = course.modules.flatMap(m => m.lessons);
-  const currentIndex = allLessons.findIndex(l => l.id === lessonId);
+  const currentIndex = allModules.findIndex(m => String(m.id) === lessonId);
   
   if (currentIndex === -1) {
     redirect(`/learn/${courseId}`);
   }
 
-  const lesson = allLessons[currentIndex];
+  const lesson = allModules[currentIndex];
   if (!lesson) redirect(`/learn/${courseId}`);
 
-  const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
-  const prevLessonId = prevLesson ? prevLesson.id : null;
+  const prevLesson = currentIndex > 0 ? allModules[currentIndex - 1] : null;
+  const prevLessonId = prevLesson ? String(prevLesson.id) : null;
 
-  const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
-  const nextLessonId = nextLesson ? nextLesson.id : null;
-
-  // Fetch current lesson's module name
-  const currentModule = course.modules.find(m => m.id === lesson.moduleId);
+  const nextLesson = currentIndex < allModules.length - 1 ? allModules[currentIndex + 1] : null;
+  const nextLessonId = nextLesson ? String(nextLesson.id) : null;
 
   // 2. Check completion status
-  const progress = await prisma.lessonProgress.findUnique({
-    where: {
-      userId_lessonId: {
-        userId: session.user.id,
-        lessonId: lesson.id
-      }
-    }
-  });
+  const isCompleted = lesson.completiondata?.state === 1 || lesson.completiondata?.state === 2;
 
-  const isCompleted = progress?.isCompleted ?? false;
+  // 3. Map Moodle module properties to our UI
+  let type = "PAGE";
+  if (lesson.modname === "assign") type = "ASSIGNMENT";
+  if (lesson.modname === "quiz") type = "EXAM";
+  if (lesson.modname === "resource") type = "PDF";
+  if (lesson.modname === "folder") type = "FOLDER";
+  if (lesson.modname === "url") type = "VIDEO"; // usually youtube links
+  if (lesson.modname === "hvp" || lesson.modname === "scorm") type = "PAGE"; // Interactive Moodle modules rendered in iframe
+
+  let contentUrl = lesson.url || "";
+  // If it's a file resource (like a PDF), extract the direct file URL
+  if (lesson.modname === "resource" && lesson.contents && lesson.contents.length > 0 && lesson.contents[0].fileurl) {
+    contentUrl = lesson.contents[0].fileurl + `&token=${session.user.moodleToken}`;
+  }
 
   return (
     <LessonViewerClient 
       lesson={{
-        id: lesson.id,
-        title: lesson.title,
-        type: lesson.type,
-        contentUrl: lesson.contentUrl,
-        module: { title: currentModule?.title || "Module" }
+        id: String(lesson.id),
+        title: lesson.name,
+        type: type,
+        contentUrl: contentUrl,
+        module: { title: lesson.sectionName || "Module" }
       }}
       courseId={courseId}
       isCompleted={isCompleted}

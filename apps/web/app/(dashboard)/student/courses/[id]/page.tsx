@@ -8,5 +8,5 @@ export function generateStaticParams() {
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
-  redirect(`/student/catalog/${resolvedParams.id}`);
+  redirect(`/student/courses/${resolvedParams.id}/learn`);
 }

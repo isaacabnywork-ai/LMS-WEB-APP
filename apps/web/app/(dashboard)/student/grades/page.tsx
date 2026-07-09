@@ -34,56 +34,66 @@ export default async function StudentGradesPage() {
   if (!session?.user?.id) redirect("/");
 
   const userId = session.user.id;
-
-  // Fetch graded assignments
-  const submissions = await prisma.submission.findMany({
-    where: { userId, score: { not: null } },
-    include: { assignment: { include: { course: true } } },
-    orderBy: { gradedAt: "desc" }
-  });
-
-  // Fetch graded quizzes
-  const quizAttempts = await prisma.quizAttempt.findMany({
-    where: { userId, score: { not: null } },
-    include: { quiz: { include: { course: true, questions: true } } },
-    orderBy: { submittedAt: "desc" }
-  });
+  const moodleToken = (session.user as any).moodleToken;
 
   const grades: GradeItem[] = [];
   const pcts: number[] = [];
 
-  submissions.forEach(s => {
-    const score = s.score!;
-    const maxScore = s.assignment.maxScore;
-    pcts.push(score / maxScore);
-    grades.push({
-      id: `sub-${s.id}`,
-      course: s.assignment.course.title,
-      assignment: s.assignment.title,
-      score,
-      total: maxScore,
-      date: s.gradedAt ? new Date(s.gradedAt).toLocaleDateString() : new Date().toLocaleDateString(),
-      status: calculateLetterGrade(score, maxScore)
-    });
-  });
+  try {
+    if (moodleToken) {
+      // 1. Fetch enrolled courses for the student
+      const { moodle } = await import("@/lib/moodle/client");
+      const courses = await moodle.call<any[]>('core_enrol_get_users_courses', {
+        userid: userId
+      }, { cache: 'no-store' }, moodleToken);
 
-  quizAttempts.forEach(qa => {
-    const score = qa.score!;
-    const maxScore = qa.quiz.questions.reduce((sum, q) => sum + q.points, 0) || 1;
-    pcts.push(score / maxScore);
-    grades.push({
-      id: `qa-${qa.id}`,
-      course: qa.quiz.course.title,
-      assignment: qa.quiz.title,
-      score,
-      total: maxScore,
-      date: qa.submittedAt ? new Date(qa.submittedAt).toLocaleDateString() : new Date().toLocaleDateString(),
-      status: calculateLetterGrade(score, maxScore)
-    });
-  });
+      // 2. Fetch grades for each course
+      for (const course of courses) {
+        const gradeReport = await moodle.call<any>('gradereport_user_get_grade_items', {
+          courseid: course.id,
+          userid: userId
+        }, { cache: 'no-store' }, moodleToken);
+        
+        if (gradeReport.usergrades && gradeReport.usergrades.length > 0) {
+          const userGrade = gradeReport.usergrades[0];
+          
+          if (userGrade.gradeitems) {
+            for (const item of userGrade.gradeitems) {
+              // We can filter out course totals or empty grades if desired
+              // For now, let's include anything that has a grade or is a course total
+              const isGraded = item.gradeformatted && item.gradeformatted !== '-';
+              
+              let score = 0;
+              let max = 100;
+              
+              if (isGraded) {
+                // Some Moodle setups return strings like "95.00"
+                score = parseFloat(item.gradeformatted) || 0;
+                max = parseFloat(item.grademax) || 100;
+                pcts.push(score / max);
+              }
 
-  // Sort by date descending
-  grades.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              const status = isGraded ? calculateLetterGrade(score, max) : 'N/A';
+              const assignmentName = item.itemname || (item.itemtype === 'course' ? 'Course Total' : 'Assignment');
+              const dateTimestamp = item.gradedatedatesubmitted || item.gradedategraded || (Date.now() / 1000);
+              
+              grades.push({
+                id: String(item.id),
+                course: course.fullname,
+                assignment: assignmentName,
+                score: isGraded ? score : 0,
+                total: max,
+                date: new Date(dateTimestamp * 1000).toLocaleDateString(),
+                status: status
+              });
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Failed to fetch Moodle grades:", error);
+  }
 
   const gpa = calculateGPA(pcts);
   const totalCredits = grades.length * 3; // Mock 3 credits per graded item

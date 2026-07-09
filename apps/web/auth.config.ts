@@ -6,7 +6,8 @@ export const authConfig = {
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
+      const hasMoodleToken = !!(auth?.user as any)?.moodleToken;
+      const isLoggedIn = !!auth?.user && hasMoodleToken;
       const role = (auth?.user as any)?.role;
       const path = nextUrl.pathname;
 
@@ -20,16 +21,16 @@ export const authConfig = {
         }
       }
 
-      // Protect /teacher routes
-      if (path.startsWith("/teacher")) {
+      // Protect /teacher routes (except the teacher login page at /teacher)
+      if (path.startsWith("/teacher") && path !== "/teacher") {
         if (!isLoggedIn) return false;
         if (role !== "teacher" && role !== "admin") {
           return Response.redirect(new URL("/unauthorized", nextUrl));
         }
       }
 
-      // Protect /admin routes
-      if (path.startsWith("/admin")) {
+      // Protect /admin routes (except the admin login page at /admin)
+      if (path.startsWith("/admin") && path !== "/admin") {
         if (!isLoggedIn) return false;
         if (role !== "admin") {
           return Response.redirect(new URL("/unauthorized", nextUrl));
@@ -37,7 +38,7 @@ export const authConfig = {
       }
 
       // Redirect logged-in users away from auth pages to their dashboards
-      if (isLoggedIn && (path === "/" || path === "/login" || path === "/register")) {
+      if (isLoggedIn && (path === "/" || path === "/login" || path === "/register" || path === "/admin" || path === "/teacher")) {
         if (role === "admin") return Response.redirect(new URL("/admin/dashboard", nextUrl));
         if (role === "teacher") return Response.redirect(new URL("/teacher/dashboard", nextUrl));
         if (role === "student") return Response.redirect(new URL("/student/dashboard", nextUrl));
@@ -49,6 +50,7 @@ export const authConfig = {
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        token.moodleToken = user.moodleToken;
       }
       return token;
     },
@@ -56,6 +58,7 @@ export const authConfig = {
       if (token && session.user) {
         session.user.role = token.role as string;
         session.user.id = token.id as string;
+        session.user.moodleToken = token.moodleToken as string;
       }
       return session;
     }
