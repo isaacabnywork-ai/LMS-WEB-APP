@@ -88,7 +88,7 @@ export const submitQuiz = async (req: AuthRequest, res: Response): Promise<void>
     let totalMarks = 0;
 
     // Autograde MCQ, True/False, Fill in Blank
-    quiz.questions.forEach((q) => {
+    quiz.questions.forEach((q: any) => {
       totalMarks += q.marks;
       const studentAnswer = answers[q.id];
       if (studentAnswer && studentAnswer === q.correctAnswer) {

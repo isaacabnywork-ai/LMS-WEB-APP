@@ -34,14 +34,14 @@ export const getStudentGrades = async (req: AuthRequest, res: Response): Promise
     let totalEarned = 0;
     let totalMax = 0;
 
-    submissions.forEach(sub => {
+    submissions.forEach((sub: any) => {
       if (sub.score !== null) {
         totalEarned += sub.score;
         totalMax += sub.assignment.maxScore;
       }
     });
 
-    quizResults.forEach(qr => {
+    quizResults.forEach((qr: any) => {
       totalEarned += qr.score;
       totalMax += qr.totalMarks;
     });

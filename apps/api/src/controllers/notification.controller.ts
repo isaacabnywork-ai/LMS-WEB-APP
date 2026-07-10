@@ -46,7 +46,7 @@ export const broadcastAnnouncement = async (req: AuthRequest, res: Response): Pr
     });
 
     // Create a notification for each student
-    const notificationsData = enrollments.map((e) => ({
+    const notificationsData = enrollments.map((e: any) => ({
       userId: e.studentId,
       title,
       message,
