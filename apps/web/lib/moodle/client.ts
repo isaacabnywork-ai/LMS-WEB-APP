@@ -16,10 +16,7 @@ export class MoodleClient {
   private readonly defaultToken?: string;
 
   constructor(token?: string) {
-    const url = process.env.MOODLE_URL;
-    if (!url) {
-      throw new Error('MOODLE_URL environment variable is not set');
-    }
+    const url = process.env.MOODLE_URL || 'http://localhost';
     // Ensure URL has a trailing slash for the REST endpoint
     this.baseUrl = url.endsWith('/') ? `${url}webservice/rest/server.php` : `${url}/webservice/rest/server.php`;
     this.defaultToken = token || process.env.MOODLE_WS_TOKEN;
