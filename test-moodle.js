@@ -1,17 +1,21 @@
-const MOODLE_URL = 'http://localhost:8080/webservice/rest/server.php';
-const TOKEN = '28c00543f331e778b150656d98ce8cbd'; // from .env
+const fetch = require('node-fetch');
 
 async function run() {
-  const enrolParams = new URLSearchParams();
-  enrolParams.append('wstoken', TOKEN);
-  enrolParams.append('wsfunction', 'enrol_manual_enrol_users');
-  enrolParams.append('moodlewsrestformat', 'json');
-  enrolParams.append('enrolments[0][roleid]', '5');
-  enrolParams.append('enrolments[0][userid]', '3');
-  enrolParams.append('enrolments[0][courseid]', '5'); // Try course 5
-
-  const res = await fetch(`${MOODLE_URL}?${enrolParams.toString()}`, { method: 'POST' });
-  const data = await res.text();
-  console.log("Enrol Result:", data);
+  const wsToken = '9acfbd1b59ae46e3f913a6fbd667ac5dcbd';
+  const url = `https://academy.aviatech.aero/webservice/rest/server.php?wstoken=${wsToken}&wsfunction=core_course_get_contents&moodlewsrestformat=json&courseid=11`;
+  
+  const res = await fetch(url);
+  const data = await res.json();
+  
+  if (data && data.length > 0) {
+    const section = data.find(s => s.modules && s.modules.length > 0);
+    if (section) {
+      console.log("Module URL:", section.modules[0].url);
+    } else {
+      console.log("No modules found");
+    }
+  } else {
+    console.log(data);
+  }
 }
 run();

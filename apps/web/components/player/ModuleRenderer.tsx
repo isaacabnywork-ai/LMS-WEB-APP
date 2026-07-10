@@ -73,17 +73,22 @@ export default function ModuleRenderer({ module, courseId, onNext }: ModuleRende
 
         {/* Interactive Moodle Modules (Iframe Embed) */}
         {module.modname !== 'resource' && !isVideo && (
-          <div className="w-full h-full min-h-[85vh] bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 relative group flex-1">
+          <div className="w-full h-full flex flex-col gap-2 min-h-[85vh] relative group flex-1">
             {module.url && module.url !== "#" ? (
-              <iframe
-                src={module.url}
-                title={module.name}
-                className="w-full h-full absolute inset-0"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads allow-modals"
-                allowFullScreen
-              />
+              <>
+
+                <div className="w-full flex-1 relative bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                  <iframe
+                    src={module.url}
+                    title={module.name}
+                    className="w-full h-full absolute inset-0"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads allow-modals"
+                    allowFullScreen
+                  />
+                </div>
+              </>
             ) : (
-              <div className="flex items-center justify-center h-full w-full text-gray-500 absolute inset-0">
+              <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex items-center justify-center h-full w-full text-gray-500 flex-1">
                 <p>Content URL is missing or invalid.</p>
               </div>
             )}

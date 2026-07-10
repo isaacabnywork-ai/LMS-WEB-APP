@@ -31,6 +31,53 @@ export async function enrollInCourse(courseId: string) {
   return { success: true };
 }
 
+import { redirect } from "next/navigation";
+
+export async function createStripeCheckout(courseId: string, courseTitle: string, courseSummary: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const Stripe = (await import('stripe')).default;
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2023-10-16' as any });
+  
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (
+    process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : "http://localhost:3000"
+  );
+
+  const checkoutSession = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: courseTitle,
+            description: courseSummary.substring(0, 255) || "Moodle Course",
+          },
+          unit_amount: 4900, // $49.00
+        },
+        quantity: 1,
+      },
+    ],
+    mode: "payment",
+    success_url: `${baseUrl}/student/courses/${courseId}?success=true`,
+    cancel_url: `${baseUrl}/student/catalog/${courseId}?canceled=true`,
+    metadata: {
+      userId: session.user.id,
+      courseId: String(courseId),
+    },
+    customer_email: session.user.email || undefined,
+  });
+
+  if (!checkoutSession.url) {
+    throw new Error("Failed to create checkout session");
+  }
+
+  redirect(checkoutSession.url);
+}
+
 export async function markLessonComplete(lessonId: string, courseId: string, isCompleted: boolean) {
   const session = await auth();
   if (!session?.user?.id || !session.user.moodleToken) throw new Error("Unauthorized");

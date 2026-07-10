@@ -84,50 +84,57 @@ export function CourseSidebarClient({
           {course.modules.length === 0 ? (
             <p className="text-sm text-foreground/50 text-center p-4">No curriculum added yet.</p>
           ) : (
-            course.modules.map((mod, i) => (
-              <div key={mod.id} className="space-y-1">
-                <h3 className="font-bold text-sm px-2 py-2 text-foreground/80 tracking-wide">
-                  {mod.title}
-                </h3>
-                
-                <div className="space-y-1">
-                  {mod.items.map(item => {
-                    const isCompleted = completedLessonIds.includes(item.id);
-                    const href = `/learn/${course.id}/lessons/${item.id}`;
-
-                    const isActive = pathname === href;
-                    
-                    return (
-                      <Link 
-                        key={item.id} 
-                        href={href}
-                        onClick={(e) => {
-                          if (item.uservisible === false) {
-                            e.preventDefault();
-                          } else {
-                            setIsMobileOpen(false);
-                          }
-                        }}
-                        className={`flex items-start gap-3 p-3 rounded-xl transition-all ${
-                          isActive 
-                            ? "bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold" 
-                            : "hover:bg-black/5 dark:hover:bg-white/5 text-foreground/80 font-medium"
-                        } ${item.uservisible === false ? "opacity-50 cursor-not-allowed" : ""}`}
-                      >
-                        {getLessonIcon(item.type, isCompleted)}
-                        <span className="text-sm leading-snug flex-1">{item.title}</span>
-                        {item.uservisible === false && (
-                          <svg className="w-4 h-4 shrink-0 text-foreground/40 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        )}
-                      </Link>
-                    )
-                  })}
-                  {mod.items.length === 0 && (
-                    <div className="text-xs text-foreground/40 px-3 py-2 italic">No items in this section</div>
-                  )}
+            (() => {
+              return course.modules.map((mod, i) => (
+                <div key={mod.id} className="space-y-1">
+                  <h3 className="font-bold text-sm px-2 py-2 text-foreground/80 tracking-wide">
+                    {mod.title}
+                  </h3>
+                  
+                  <div className="space-y-1">
+                    {mod.items.map(item => {
+                      const isCompleted = completedLessonIds.includes(item.id);
+                      const href = `/learn/${course.id}/lessons/${item.id}`;
+                      const isActive = pathname === href;
+                      
+                      const isLocked = item.uservisible === false;
+                      
+                      return (
+                        <Link 
+                          key={item.id} 
+                          href={href}
+                          onClick={(e) => {
+                            if (isLocked) {
+                              e.preventDefault();
+                            } else {
+                              setIsMobileOpen(false);
+                            }
+                          }}
+                          className={`flex items-start gap-3 p-3 rounded-xl transition-all ${
+                            isActive 
+                              ? "bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold" 
+                              : "hover:bg-black/5 dark:hover:bg-white/5 text-foreground/80 font-medium"
+                          } ${isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          {isLocked ? (
+                            <span className="text-foreground/40 shrink-0 w-5 text-center">🔒</span>
+                          ) : (
+                            getLessonIcon(item.type, isCompleted)
+                          )}
+                          <span className="text-sm leading-snug flex-1">{item.title}</span>
+                          {(item.uservisible === false) && (
+                            <svg className="w-4 h-4 shrink-0 text-foreground/40 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                          )}
+                        </Link>
+                      )
+                    })}
+                    {mod.items.length === 0 && (
+                      <div className="text-xs text-foreground/40 px-3 py-2 italic">No items in this section</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              ));
+            })()
           )}
         </div>
       </aside>

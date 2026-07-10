@@ -22,42 +22,46 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         try {
-          const moodleUser = await authenticateWithMoodle(
+          const rawMoodleUser = await authenticateWithMoodle(
             credentials.email as string, 
             credentials.password as string
           );
           
-          if (!moodleUser) return null;
+          if (!rawMoodleUser) return null;
+          
+          const moodleUser = rawMoodleUser as any;
 
-          // Note: In a full Moodle integration, we would verify the user's Moodle role
-          // against the requested role (credentials.role).
-          // For now, we trust the UI's role selection or default to student.
           const assignedRole = (credentials.role as string) || "student";
 
-          // Sync the user to the local database so relations and role checks work
+          const userId = String(moodleUser.id);
+          const userName = moodleUser.name || "User";
+
           await prisma.user.upsert({
-            where: { id: moodleUser.id },
+            where: { id: userId },
             update: {
               email: moodleUser.email,
               role: assignedRole,
             },
             create: {
-              id: moodleUser.id,
+              id: userId,
               email: moodleUser.email,
               role: assignedRole,
             }
           });
 
           return {
-            id: moodleUser.id,
+            id: userId,
             email: moodleUser.email,
-            name: moodleUser.name,
+            name: userName,
             role: assignedRole,
             moodleToken: moodleUser.moodleToken,
-          };
+            privateToken: moodleUser.privateToken,
+          } as any;
         } catch (error: any) {
           console.error("Moodle Auth Error:", error.message);
-          throw new Error("Invalid credentials or Moodle connection failed.");
+          // Return null instead of throwing an Error to prevent NextAuth from showing "Configuration" error.
+          // Returning null displays a standard "CredentialsSignin" error to the user.
+          return null;
         }
       }
     })

@@ -22,13 +22,16 @@ export function LessonViewerClient({
 
   const handleComplete = async () => {
     setLoading(true);
-    await markLessonComplete(lesson.id, courseId, !isCompleted);
-    setLoading(false);
-    
-    // Automatically go to next lesson if marking as complete and there is a next lesson
-    if (!isCompleted && nextLessonId) {
-      router.push(`/learn/${courseId}/lessons/${nextLessonId}`);
+    try {
+      await markLessonComplete(lesson.id, courseId, !isCompleted);
+      // Automatically go to next lesson if marking as complete and there is a next lesson
+      if (!isCompleted && nextLessonId) {
+        router.push(`/learn/${courseId}/lessons/${nextLessonId}`);
+      }
+    } catch (err: any) {
+      alert("Could not mark as complete. This usually means the activity in Moodle is set to 'Automatic Completion' (e.g., it completes automatically when you view it, submit a quiz, or receive a grade), so it cannot be manually marked complete.");
     }
+    setLoading(false);
   };
 
   const renderContent = () => {
@@ -77,8 +80,11 @@ export function LessonViewerClient({
 
     if (type === "pdf") {
       return (
-        <div className="w-full h-[70vh] rounded-2xl overflow-hidden border border-foreground/10 shadow-xl bg-black/5">
-          <iframe src={lesson.contentUrl} className="w-full h-full" />
+        <div className="w-full flex flex-col gap-4">
+
+          <div className="w-full h-[70vh] rounded-2xl overflow-hidden border border-foreground/10 shadow-xl bg-black/5">
+            <iframe src={lesson.contentUrl} className="w-full h-full" />
+          </div>
         </div>
       );
     }
@@ -94,13 +100,14 @@ export function LessonViewerClient({
       );
     }
 
-    if (type === "page" || type === "exam" || type === "assignment" || type === "quiz" || type === "folder") {
+    if (type === "page" || type === "exam" || type === "assignment" || type === "quiz" || type === "folder" || type === "reading" || type === "url" || type === "resource") {
       return (
         <div className="w-full flex flex-col gap-4">
+
           <div className="w-full min-h-[70vh] relative group">
             <iframe 
               src={lesson.contentUrl} 
-              className="w-full h-full min-h-[70vh] absolute top-0 left-0"
+              className="w-full h-full min-h-[70vh] absolute top-0 left-0 border-2 border-slate-100 dark:border-slate-800 rounded-xl"
               title={lesson.title}
               sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads allow-modals"
               allowFullScreen
@@ -116,18 +123,14 @@ export function LessonViewerClient({
         <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm mx-auto flex items-center justify-center mb-4">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
         </div>
-        <h3 className="text-xl font-bold mb-2">External Resource</h3>
-        <p className="text-foreground/60 mb-6">This lesson contains an external link or resource that couldn't be embedded automatically.</p>
-        <a href={lesson.contentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
-          Open Resource
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-        </a>
+        <h3 className="text-xl font-bold mb-2">Resource Module</h3>
+        <p className="text-foreground/60 mb-6">This lesson module is meant to be marked as complete when you are finished.</p>
       </div>
     );
   };
 
   return (
-    <div className="max-w-5xl mx-auto w-full p-4 sm:p-6 lg:p-10 pb-32 animate-slide-up">
+    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-10 pb-32 animate-slide-up">
       {/* Lesson Header */}
       <div className="mb-8">
         <p className="text-sm font-bold text-teal-600 uppercase tracking-widest mb-2">{lesson.module.title}</p>

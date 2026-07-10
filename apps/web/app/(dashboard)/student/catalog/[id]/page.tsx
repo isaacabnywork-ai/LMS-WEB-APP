@@ -2,7 +2,7 @@ import React from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import CourseDetailClient, { CourseDetailProps } from "@/components/CourseDetailClient";
-import { enrollInCourse, submitReview, deleteReview } from "@/app/actions/student";
+import { enrollInCourse, submitReview, deleteReview, createStripeCheckout } from "@/app/actions/student";
 import { createDiscussion, replyDiscussion } from "@/app/actions/course";
 import { moodle } from "@/lib/moodle/client";
 
@@ -108,11 +108,12 @@ export default async function CatalogCourseDetailPage({ params }: { params: Prom
     currentUserId: session.user.id
   };
 
-  const enrollAction = async () => {
-    "use server";
-    await enrollInCourse(courseId);
-    redirect(`/student/courses/${courseId}`);
-  };
+  const enrollAction = createStripeCheckout.bind(
+    null, 
+    String(course.id), 
+    course.fullname, 
+    course.summary?.replace(/(<([^>]+)>)/gi, "") || "Moodle Course"
+  );
 
   const createDiscussionAction = async (title: string, content: string) => {
     "use server";

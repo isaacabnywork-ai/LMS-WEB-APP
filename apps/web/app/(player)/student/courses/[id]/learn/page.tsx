@@ -16,13 +16,13 @@ export default async function CoursePlayerPage({ params }: { params: Promise<{ i
   // 1. Fetch course details
   let course;
   try {
-    const courses = await moodle.call<any[]>('core_course_get_courses_by_field', {
+    const coursesResponse = await moodle.call<any>('core_course_get_courses_by_field', {
       field: 'id',
       value: courseId
     }, {}, session.user.moodleToken);
     
-    if (courses && courses.courses && courses.courses.length > 0) {
-      course = courses.courses[0];
+    if (coursesResponse && coursesResponse.courses && coursesResponse.courses.length > 0) {
+      course = coursesResponse.courses[0];
     } else {
       throw new Error("Course not found");
     }
@@ -38,14 +38,40 @@ export default async function CoursePlayerPage({ params }: { params: Promise<{ i
       courseid: courseId
     }, {}, session.user.moodleToken);
 
-    // Backfill missing URLs for modules (e.g. forums often don't return a url field)
+    let baseAutologinUrl = "";
+    const privateToken = (session.user as any).privateToken;
+    if (privateToken) {
+      try {
+        const autologinResponse = await moodle.call<any>('tool_mobile_get_autologin_key', {
+          privatetoken: privateToken
+        }, { cache: 'no-store' }, session.user.moodleToken);
+        if (autologinResponse && autologinResponse.autologinurl) {
+          baseAutologinUrl = autologinResponse.autologinurl;
+        }
+      } catch (err: any) {
+        console.warn("Failed to fetch autologin key:", err.message);
+      }
+    }
+
     const baseUrl = process.env.MOODLE_URL || "http://localhost:8080";
     courseContents = courseContents.map(section => ({
       ...section,
-      modules: (section.modules || []).map((mod: any) => ({
-        ...mod,
-        url: mod.url || `${baseUrl}/mod/${mod.modname}/view.php?id=${mod.id}`
-      }))
+      modules: (section.modules || []).map((mod: any) => {
+        let contentUrl = mod.url || `${baseUrl}/mod/${mod.modname}/view.php?id=${mod.id}`;
+        
+        if (mod.modname === 'resource' && mod.contents && mod.contents.length > 0 && mod.contents[0].fileurl) {
+          contentUrl = mod.contents[0].fileurl + `&token=${session.user.moodleToken}`;
+        } else if (baseAutologinUrl && contentUrl !== "#") {
+          const urlObj = new URL(baseAutologinUrl);
+          urlObj.searchParams.set('siteurl', contentUrl);
+          contentUrl = urlObj.toString();
+        }
+
+        return {
+          ...mod,
+          url: contentUrl
+        };
+      })
     }));
   } catch (err) {
     console.error("Failed to fetch course contents:", err);

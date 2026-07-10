@@ -11,7 +11,6 @@ export default function LandingPage() {
   const [role, setRole] = useState<"student" | "teacher" | "admin">("student");
   
   const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("password123");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +25,6 @@ export default function LandingPage() {
     } else {
       setEmail("");
       setName("");
-      setUsername("");
       setPassword("");
     }
   }, [role, activeTab]);
@@ -39,7 +37,7 @@ export default function LandingPage() {
     try {
       if (activeTab === "signup") {
         // Handle Registration
-        await registerUser({ name, username, email, password, role });
+        await registerUser({ name, username: email, email, password, role });
       }
 
       // Automatically login after registration or standard login
@@ -189,26 +187,17 @@ export default function LandingPage() {
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Username</label>
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="alexbaker"
-                      required
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
-                    />
-                  </div>
                 </>
               )}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Email Address</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Username or Email Address
+                </label>
                 <input
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="alex@university.edu"
+                  placeholder="alexbaker or alex@university.edu"
                   required
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                 />

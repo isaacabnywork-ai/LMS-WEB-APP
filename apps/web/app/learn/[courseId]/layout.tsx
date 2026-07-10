@@ -28,14 +28,32 @@ export default async function LearnLayout({
     redirect("/student/courses");
   }
 
-  // Fetch course contents (Sections and Modules)
-  const contents = await moodle.call<any[]>('core_course_get_contents', {
+  // Fetch FULL course contents using Admin Token (to see all modules, even hidden ones)
+  const fullContents = await moodle.call<any[]>('core_course_get_contents', {
+    courseid: courseId
+  }, { cache: 'no-store' }, process.env.MOODLE_WS_TOKEN).catch(() => []);
+
+  // Fetch STUDENT course contents (to see what is actually unlocked and completed for them)
+  const studentContents = await moodle.call<any[]>('core_course_get_contents', {
     courseid: courseId
   }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
 
   const completedLessonIds: string[] = [];
 
-  const modulesWithItems = contents
+  console.log("DEBUG LAYOUT.TSX: fullContents length:", fullContents.length);
+  console.log("DEBUG LAYOUT.TSX: fullContents sections:", fullContents.map(s => s.name).join(", "));
+  console.log("DEBUG LAYOUT.TSX: studentContents length:", studentContents.length);
+  console.log("DEBUG LAYOUT.TSX: studentContents sections:", studentContents.map(s => s.name).join(", "));
+
+  // Create a lookup map for student's view of the modules
+  const studentModuleMap = new Map();
+  studentContents.forEach((section: any) => {
+    (section.modules || []).forEach((mod: any) => {
+      studentModuleMap.set(mod.id, mod);
+    });
+  });
+
+  const modulesWithItems = fullContents
     .filter((section: any) => section.name && section.modules.length > 0)
     .map((section: any, index: number) => ({
       id: String(section.id),
@@ -48,19 +66,26 @@ export default async function LearnLayout({
         if (mod.modname === "resource") type = "PDF";
         if (mod.modname === "folder") type = "FOLDER";
         if (mod.modname === "url") type = "VIDEO"; // usually youtube links
-        if (mod.modname === "hvp" || mod.modname === "scorm") type = "PAGE"; // Interactive Moodle modules rendered in iframe
+        if (mod.modname === "hvp" || mod.modname === "scorm") type = "PAGE"; 
 
-        // Track completed items
-        if (mod.completiondata?.state === 1 || mod.completiondata?.state === 2) {
+        // Get student's version of this module
+        const studentMod = studentModuleMap.get(mod.id);
+
+        // Track completed items based on student's data
+        if (studentMod?.completiondata?.state === 1 || studentMod?.completiondata?.state === 2) {
           completedLessonIds.push(String(mod.id));
         }
+
+        // It is user-visible if the student can see it AND it's marked uservisible: true by Moodle for the student.
+        // If it's completely missing from studentMod, it's hidden from them.
+        const isUserVisible = studentMod ? (studentMod.uservisible !== false) : false;
 
         return {
           id: String(mod.id),
           title: mod.name,
           type: type,
           position: modIndex,
-          uservisible: mod.uservisible !== false
+          uservisible: isUserVisible
         };
       })
     }));

@@ -42,7 +42,7 @@ export default async function LessonPage({
   }
 
   const lesson = allModules[currentIndex];
-  if (!lesson) redirect(`/learn/${courseId}`);
+  if (!lesson || lesson.uservisible === false) redirect(`/learn/${courseId}`);
 
   const prevLesson = currentIndex > 0 ? allModules[currentIndex - 1] : null;
   const prevLessonId = prevLesson ? String(prevLesson.id) : null;
@@ -52,6 +52,8 @@ export default async function LessonPage({
 
   // 2. Check completion status
   const isCompleted = lesson.completiondata?.state === 1 || lesson.completiondata?.state === 2;
+
+  // We rely on Moodle's uservisible property and locking rules rather than forcing strict sequential completion here.
 
   // 3. Map Moodle module properties to our UI
   let type = "PAGE";
@@ -66,6 +68,23 @@ export default async function LessonPage({
   // If it's a file resource (like a PDF), extract the direct file URL
   if (lesson.modname === "resource" && lesson.contents && lesson.contents.length > 0 && lesson.contents[0].fileurl) {
     contentUrl = lesson.contents[0].fileurl + `&token=${session.user.moodleToken}`;
+  } else if (contentUrl && (type === "PAGE" || type === "ASSIGNMENT" || type === "EXAM" || type === "FOLDER")) {
+    const privateToken = (session.user as any).privateToken;
+    if (privateToken) {
+      try {
+        const autologinResponse = await moodle.call<any>('tool_mobile_get_autologin_key', {
+          privatetoken: privateToken
+        }, { cache: 'no-store' }, session.user.moodleToken);
+
+        if (autologinResponse && autologinResponse.autologinurl) {
+          const urlObj = new URL(autologinResponse.autologinurl);
+          urlObj.searchParams.set('siteurl', contentUrl);
+          contentUrl = urlObj.toString();
+        }
+      } catch (err: any) {
+        console.warn("Failed to fetch autologin key. Moodle token might be stale or not from mobile app:", err.message);
+      }
+    }
   }
 
   return (

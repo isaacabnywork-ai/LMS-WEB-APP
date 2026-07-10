@@ -150,12 +150,14 @@ export default function AdminLogin() {
                 </>
               )}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Email Address</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {activeTab === "login" ? "Username or Email Address" : "Email Address"}
+                </label>
                 <input
-                  type="email"
+                  type={activeTab === "login" ? "text" : "email"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@university.edu"
+                  placeholder={activeTab === "login" ? "adminuser or admin@university.edu" : "admin@university.edu"}
                   required
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all text-sm"
                 />

@@ -51,6 +51,7 @@ export const authConfig = {
         token.role = user.role;
         token.id = user.id;
         token.moodleToken = user.moodleToken;
+        token.privateToken = (user as any).privateToken;
       }
       return token;
     },
@@ -59,6 +60,7 @@ export const authConfig = {
         session.user.role = token.role as string;
         session.user.id = token.id as string;
         session.user.moodleToken = token.moodleToken as string;
+        (session.user as any).privateToken = token.privateToken as string;
       }
       return session;
     }
