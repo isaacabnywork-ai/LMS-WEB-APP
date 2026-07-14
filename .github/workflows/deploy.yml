@@ -29,6 +29,10 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            # Load NVM so npm and pm2 commands work in this SSH session
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            
             # Navigate to the copied folder
             cd ~/lms_web_app/"LMS WEB APP"
             
@@ -38,17 +42,11 @@ jobs:
             
             # Install PM2 globally if it's not already installed
             if ! command -v pm2 &> /dev/null; then
-                sudo npm install -g pm2
+                npm install -g pm2
             fi
             
-            # Start or restart the Next.js app in the background
-            # If the app is already running, this will restart it to apply changes
-            pm2 describe lms-web > /dev/null
-            if [ $? -eq 0 ]; then
-                pm2 restart lms-web
-            else
-                pm2 start npm --name "lms-web" -- run start --workspace=web
-            fi
+            # Restart the existing learn-app with updated environment variables
+            pm2 restart learn-app --update-env
             
             # Save the PM2 process list so it restarts if the VPS reboots
             pm2 save
