@@ -18,7 +18,7 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "."
-          target: "~/lms_web_app"
+          target: "~/lms_web_app/LMS WEB APP"
           # Exclude heavy folders so the upload is fast
           exclude: ".git,node_modules,apps/web/node_modules,apps/web/.next,packages/*/node_modules,.turbo"
 
@@ -30,7 +30,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             # Navigate to the copied folder
-            cd ~/lms_web_app
+            cd ~/lms_web_app/"LMS WEB APP"
             
             # Install dependencies and build
             npm install
