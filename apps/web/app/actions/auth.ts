@@ -5,7 +5,7 @@ import { moodle } from "@/lib/moodle/client";
 
 export async function registerUser(data: { name: string; username: string; email: string; password: string; role: "student" | "teacher" | "admin" }) {
   if (!data.email || !data.password || !data.name || !data.username) {
-    throw new Error("Missing required fields");
+    return { error: "Missing required fields" };
   }
 
   const isEmail = data.email.includes("@");
@@ -23,7 +23,7 @@ export async function registerUser(data: { name: string; username: string; email
   });
 
   if (existingLocalUser) {
-    throw new Error("This account is already registered locally");
+    return { error: "This account is already registered locally" };
   }
 
   const firstName = data.name.split(" ")[0] || actualUsername;
@@ -31,7 +31,7 @@ export async function registerUser(data: { name: string; username: string; email
 
   try {
     // 1. Create the user in Moodle
-    const newUsers = await moodle.call<any[]>('core_user_create_users', {
+    const newUsers: any = await moodle.call('core_user_create_users', {
       'users[0][username]': actualUsername,
       'users[0][password]': data.password,
       'users[0][firstname]': firstName,
@@ -39,8 +39,13 @@ export async function registerUser(data: { name: string; username: string; email
       'users[0][email]': actualEmail,
     }, { method: 'POST' });
 
-    if (!newUsers || !newUsers[0] || !newUsers[0].id) {
-      throw new Error("Moodle did not return a valid user ID.");
+    // Handle Moodle API exceptions which might not be thrown as HTTP errors
+    if (newUsers && newUsers.exception) {
+      return { error: newUsers.message || "Moodle exception occurred" };
+    }
+
+    if (!newUsers || !Array.isArray(newUsers) || !newUsers[0] || !newUsers[0].id) {
+      return { error: "Moodle did not return a valid user ID." };
     }
 
     const newMoodleUserId = String(newUsers[0].id);
@@ -57,7 +62,7 @@ export async function registerUser(data: { name: string; username: string; email
     return { success: true };
   } catch (error: any) {
     console.error("Moodle registration error:", error);
-    throw new Error(error.message || "Failed to register user in Moodle");
+    return { error: error.message || "Failed to register user in Moodle" };
   }
 }
 

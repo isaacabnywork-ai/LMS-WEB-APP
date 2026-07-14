@@ -37,7 +37,12 @@ export default function LandingPage() {
     try {
       if (activeTab === "signup") {
         // Handle Registration
-        await registerUser({ name, username: email, email, password, role });
+        const res = await registerUser({ name, username: email, email, password, role });
+        if (res && res.error) {
+          setError(`Registration Failed: ${res.error}`);
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Automatically login after registration or standard login
