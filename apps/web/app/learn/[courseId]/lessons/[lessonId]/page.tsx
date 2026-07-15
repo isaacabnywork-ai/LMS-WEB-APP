@@ -69,6 +69,12 @@ export default async function LessonPage({
   if (lesson.modname === "resource" && lesson.contents && lesson.contents.length > 0 && lesson.contents[0].fileurl) {
     contentUrl = lesson.contents[0].fileurl + `&token=${session.user.moodleToken}`;
   } else if (contentUrl && (type === "PAGE" || type === "ASSIGNMENT" || type === "EXAM" || type === "FOLDER")) {
+    // Hide Moodle's native header, footer, and navigation blocks
+    const targetUrlObj = new URL(contentUrl);
+    targetUrlObj.searchParams.set('embedded', '1');
+    targetUrlObj.searchParams.set('isapp', '1');
+    contentUrl = targetUrlObj.toString();
+
     const privateToken = (session.user as any).privateToken;
     if (privateToken) {
       try {
@@ -100,6 +106,7 @@ export default async function LessonPage({
       isCompleted={isCompleted}
       nextLessonId={nextLessonId}
       prevLessonId={prevLessonId}
+      allLessons={allModules.map(m => ({ id: String(m.id), title: m.name, sectionName: m.sectionName }))}
     />
   );
 }

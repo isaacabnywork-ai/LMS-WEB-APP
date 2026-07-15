@@ -62,8 +62,14 @@ export default async function CoursePlayerPage({ params }: { params: Promise<{ i
         if (mod.modname === 'resource' && mod.contents && mod.contents.length > 0 && mod.contents[0].fileurl) {
           contentUrl = mod.contents[0].fileurl + `&token=${session.user.moodleToken}`;
         } else if (baseAutologinUrl && contentUrl !== "#") {
+          // Hide Moodle's native header, footer, and navigation blocks
+          const targetUrlObj = new URL(contentUrl);
+          targetUrlObj.searchParams.set('embedded', '1');
+          targetUrlObj.searchParams.set('isapp', '1');
+          const finalTargetUrl = targetUrlObj.toString();
+
           const urlObj = new URL(baseAutologinUrl);
-          urlObj.searchParams.set('siteurl', contentUrl);
+          urlObj.searchParams.set('siteurl', finalTargetUrl);
           contentUrl = urlObj.toString();
         }
 

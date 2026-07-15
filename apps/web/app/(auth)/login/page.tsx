@@ -29,9 +29,12 @@ export default function LandingPage() {
     }
   }, [role, activeTab]);
 
+  const [loadingText, setLoadingText] = useState("");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setLoadingText(activeTab === "signup" ? "Creating your account in Moodle..." : "Signing in...");
     setError("");
 
     try {
@@ -41,8 +44,10 @@ export default function LandingPage() {
         if (res && res.error) {
           setError(`Registration Failed: ${res.error}`);
           setIsLoading(false);
+          setLoadingText("");
           return;
         }
+        setLoadingText("Account created! Logging you in...");
       }
 
       // Automatically login after registration or standard login
@@ -55,14 +60,17 @@ export default function LandingPage() {
 
       if (result?.error) {
         setError(`Login Failed: ${result.error}`);
+        setIsLoading(false);
+        setLoadingText("");
       } else {
+        setLoadingText("Success! Redirecting...");
         // Hard redirect to clear any app router caches and fetch session
         window.location.href = "/";
       }
     } catch (err: any) {
       setError(`Error: ${err?.message || String(err)}`);
-    } finally {
       setIsLoading(false);
+      setLoadingText("");
     }
   };
 
@@ -233,7 +241,7 @@ export default function LandingPage() {
               disabled={isLoading}
               className="mt-6 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 disabled:opacity-70 disabled:pointer-events-none"
             >
-              {isLoading ? "Please wait..." : activeTab === "login" ? "Sign In" : "Create Account"}
+              {isLoading ? loadingText || "Please wait..." : activeTab === "login" ? "Sign In" : "Create Account"}
               {!isLoading && (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />

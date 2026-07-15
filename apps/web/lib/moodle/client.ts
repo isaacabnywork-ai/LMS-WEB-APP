@@ -57,10 +57,11 @@ export class MoodleClient {
       }
     }
 
+    const method = options?.method || (wsfunction.includes('_get_') ? 'GET' : 'POST');
     const url = `${this.baseUrl}?${urlParams.toString()}`;
 
     const response = await fetch(url, {
-      method: 'POST', // Use POST to avoid large URL limits on complex queries
+      method,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },

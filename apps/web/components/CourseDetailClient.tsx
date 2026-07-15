@@ -272,7 +272,7 @@ export default function CourseDetailClient({
   onDeleteReview
 }: { 
   course: CourseDetailProps;
-  onEnroll: () => Promise<void>;
+  onEnroll: () => Promise<{ success?: boolean; error?: string } | void>;
   onCreateDiscussion?: (title: string, content: string) => Promise<void>;
   onReplyDiscussion?: (discussionId: string, content: string) => Promise<void>;
   onSubmitReview?: (rating: number, comment?: string) => Promise<void>;
@@ -290,7 +290,14 @@ export default function CourseDetailClient({
 
   const handleEnroll = async () => {
     setIsEnrolling(true);
-    await onEnroll();
+    try {
+      const res = await onEnroll();
+      if (res && res.error) {
+        alert(res.error);
+      }
+    } catch (err: any) {
+      alert(err.message || "An error occurred");
+    }
     setIsEnrolling(false);
   };
 

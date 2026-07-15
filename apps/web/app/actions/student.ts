@@ -6,7 +6,7 @@ import { moodle } from "@/lib/moodle/client";
 
 export async function enrollInCourse(courseId: string) {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
   try {
     console.log("Enrolling with courseId:", courseId, "userid:", session.user.id);
@@ -22,12 +22,14 @@ export async function enrollInCourse(courseId: string) {
       console.log("Enrolment succeeded but Moodle email notification failed. Ignoring.");
     } else {
       console.error("Enrolment error:", error.message);
-      throw new Error(`Failed to enroll: ${error.message}. Please ensure 'enrol_manual_enrol_users' is enabled in Moodle Web Services.`);
+      return { success: false, error: `This course does not have Manual Enrolment enabled, or you are already enrolled. (${error.message})` };
     }
   }
 
   revalidatePath(`/student/courses/${courseId}`);
   revalidatePath(`/student/courses`);
+  revalidatePath(`/student/catalog`);
+  revalidatePath(`/student/dashboard`);
   return { success: true };
 }
 

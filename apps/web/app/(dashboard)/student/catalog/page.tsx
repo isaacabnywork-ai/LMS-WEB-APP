@@ -5,9 +5,11 @@ import { redirect } from "next/navigation";
 import { enrollInCourse } from "@/app/actions/student";
 import { moodle } from "@/lib/moodle/client";
 
-export default async function StudentCatalog() {
+export default async function StudentCatalog({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const session = await auth();
   if (!session?.user?.id || !session.user.moodleToken) redirect("/");
+  
+  const { error } = await searchParams;
 
   // Fetch all courses from Moodle (except site course ID 1)
   const coursesResponse = await moodle.call<any>('core_course_get_courses_by_field', {}, { cache: 'no-store' }).catch(() => ({ courses: [] }));
@@ -65,6 +67,15 @@ export default async function StudentCatalog() {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 p-4 rounded-xl text-sm font-medium animate-slide-up flex justify-between items-center">
+          <span>{error}</span>
+          <Link href="/student/catalog" className="text-red-600 hover:opacity-70 dark:text-red-400 font-bold">
+            Dismiss
+          </Link>
+        </div>
+      )}
+
       {/* Course Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {allCourses.length > 0 ? (
@@ -97,7 +108,10 @@ export default async function StudentCatalog() {
                     ) : (
                       <form action={async () => {
                         "use server";
-                        await enrollInCourse(course.id);
+                        const res = await enrollInCourse(course.id);
+                        if (res && !res.success) {
+                           redirect(`/student/catalog?error=${encodeURIComponent(res.error || "Failed to enroll")}`);
+                        }
                       }}>
                         <button type="submit" className="w-full py-2.5 rounded-xl bg-teal-500 text-white hover:bg-teal-600 font-bold text-sm transition-all shadow-md">
                           Enroll Now
