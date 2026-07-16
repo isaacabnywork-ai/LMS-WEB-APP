@@ -99,7 +99,7 @@ export default async function LessonPage({
         const urlObj = new URL(autologinResponse.autologinurl);
         urlObj.searchParams.set('userid', session.user.id);
         urlObj.searchParams.set('key', autologinResponse.key);
-        urlObj.searchParams.set('siteurl', contentUrl);
+        urlObj.searchParams.set('urlto', contentUrl);
         contentUrl = urlObj.toString();
       }
     } catch (err: any) {
