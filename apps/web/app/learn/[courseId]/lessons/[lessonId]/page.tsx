@@ -70,10 +70,14 @@ export default async function LessonPage({
     contentUrl = lesson.contents[0].fileurl + `&token=${session.user.moodleToken}`;
   } else if (contentUrl && (type === "PAGE" || type === "ASSIGNMENT" || type === "EXAM" || type === "FOLDER")) {
     // Hide Moodle's native header, footer, and navigation blocks
-    const targetUrlObj = new URL(contentUrl);
-    targetUrlObj.searchParams.set('embedded', '1');
-    targetUrlObj.searchParams.set('isapp', '1');
-    contentUrl = targetUrlObj.toString();
+    try {
+      const targetUrlObj = new URL(contentUrl);
+      targetUrlObj.searchParams.set('embedded', '1');
+      targetUrlObj.searchParams.set('isapp', '1');
+      contentUrl = targetUrlObj.toString();
+    } catch (e) {
+      console.log("Invalid content URL:", contentUrl);
+    }
 
     const privateToken = (session.user as any).privateToken;
     if (!privateToken) {
@@ -96,11 +100,15 @@ export default async function LessonPage({
       }, { cache: 'no-store' }, session.user.moodleToken);
 
       if (autologinResponse && autologinResponse.autologinurl && autologinResponse.key) {
-        const urlObj = new URL(autologinResponse.autologinurl);
-        urlObj.searchParams.set('userid', session.user.id);
-        urlObj.searchParams.set('key', autologinResponse.key);
-        urlObj.searchParams.set('urlto', contentUrl);
-        contentUrl = urlObj.toString();
+        try {
+          const urlObj = new URL(autologinResponse.autologinurl);
+          urlObj.searchParams.set('userid', session.user.id);
+          urlObj.searchParams.set('key', autologinResponse.key);
+          urlObj.searchParams.set('urlto', contentUrl);
+          contentUrl = urlObj.toString();
+        } catch (e) {
+          console.log("Invalid autologin URL:", autologinResponse.autologinurl);
+        }
       }
     } catch (err: any) {
       console.log("Failed to fetch autologin key:", err.message);
