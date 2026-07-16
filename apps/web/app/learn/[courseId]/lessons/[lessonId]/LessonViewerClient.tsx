@@ -94,7 +94,27 @@ export function LessonViewerClient({
       );
     }
 
-    if (type === "page" || type === "exam" || type === "assignment" || type === "quiz" || type === "folder" || type === "reading" || type === "url" || type === "resource") {
+    if (type === "url") {
+      return (
+        <div className="w-full p-10 bg-black/5 dark:bg-white/5 rounded-2xl border border-foreground/10 text-center flex flex-col items-center justify-center min-h-[50vh]">
+          <div className="w-16 h-16 bg-[#0f4c9c] text-white rounded-2xl shadow-sm mx-auto flex items-center justify-center mb-6">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </div>
+          <h3 className="text-xl font-bold mb-3">External Resource</h3>
+          <p className="text-foreground/60 mb-8 max-w-md">This lesson contains a link to an external website or document that cannot be displayed inside the application.</p>
+          <a 
+            href={lesson.contentUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-[#0f4c9c] hover:bg-[#0c3e7f] text-white font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-2"
+          >
+            Open Resource in New Tab
+          </a>
+        </div>
+      );
+    }
+
+    if (type === "page" || type === "exam" || type === "assignment" || type === "quiz" || type === "folder" || type === "reading" || type === "resource") {
       return (
         <div className="w-full min-h-[70vh] relative group">
           <iframe 

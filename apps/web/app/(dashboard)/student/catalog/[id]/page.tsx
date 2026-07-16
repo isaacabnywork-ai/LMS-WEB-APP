@@ -108,12 +108,10 @@ export default async function CatalogCourseDetailPage({ params }: { params: Prom
     currentUserId: session.user.id
   };
 
-  const enrollAction = createStripeCheckout.bind(
-    null, 
-    String(course.id), 
-    course.fullname, 
-    course.summary?.replace(/(<([^>]+)>)/gi, "") || "Moodle Course"
-  );
+  const enrollAction = async () => {
+    "use server";
+    await enrollInCourse(courseId);
+  };
 
   const createDiscussionAction = async (title: string, content: string) => {
     "use server";

@@ -61,7 +61,7 @@ export default async function LessonPage({
   if (lesson.modname === "quiz") type = "EXAM";
   if (lesson.modname === "resource") type = "PDF";
   if (lesson.modname === "folder") type = "FOLDER";
-  if (lesson.modname === "url") type = "VIDEO"; // usually youtube links
+  if (lesson.modname === "url") type = "URL"; // external links
   if (lesson.modname === "hvp" || lesson.modname === "scorm") type = "PAGE"; // Interactive Moodle modules rendered in iframe
 
   let contentUrl = lesson.url || "";
