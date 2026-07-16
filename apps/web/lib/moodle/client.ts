@@ -64,6 +64,7 @@ export class MoodleClient {
       method,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'MoodleMobile',
       },
       ...options,
     });
