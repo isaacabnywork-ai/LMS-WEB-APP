@@ -104,7 +104,7 @@ export default async function LessonPage({
           const urlObj = new URL(autologinResponse.autologinurl);
           urlObj.searchParams.set('userid', session.user.id);
           urlObj.searchParams.set('key', autologinResponse.key);
-          urlObj.searchParams.set('urlto', contentUrl);
+          urlObj.searchParams.set('urltogo', contentUrl);
           contentUrl = urlObj.toString();
         } catch (e) {
           console.log("Invalid autologin URL:", autologinResponse.autologinurl);
