@@ -95,8 +95,10 @@ export default async function LessonPage({
         privatetoken: privateToken
       }, { cache: 'no-store' }, session.user.moodleToken);
 
-      if (autologinResponse && autologinResponse.autologinurl) {
+      if (autologinResponse && autologinResponse.autologinurl && autologinResponse.key) {
         const urlObj = new URL(autologinResponse.autologinurl);
+        urlObj.searchParams.set('userid', session.user.id);
+        urlObj.searchParams.set('key', autologinResponse.key);
         urlObj.searchParams.set('siteurl', contentUrl);
         contentUrl = urlObj.toString();
       }
