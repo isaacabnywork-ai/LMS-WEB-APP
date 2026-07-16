@@ -76,20 +76,32 @@ export default async function LessonPage({
     contentUrl = targetUrlObj.toString();
 
     const privateToken = (session.user as any).privateToken;
-    if (privateToken) {
-      try {
-        const autologinResponse = await moodle.call<any>('tool_mobile_get_autologin_key', {
-          privatetoken: privateToken
-        }, { cache: 'no-store' }, session.user.moodleToken);
+    if (!privateToken) {
+      return (
+        <div className="flex items-center justify-center min-h-[70vh] p-8 text-center flex-col gap-4">
+          <h2 className="text-2xl font-bold">Session Update Required</h2>
+          <p className="text-muted-foreground">
+            We recently updated our secure login system. Your current session is missing a required security token.
+          </p>
+          <div className="p-4 bg-yellow-500/10 border border-yellow-500/50 rounded-lg max-w-md">
+            <strong>Action Required:</strong> Please log out of your account using the profile menu in the top right corner, and then log back in.
+          </div>
+        </div>
+      );
+    }
 
-        if (autologinResponse && autologinResponse.autologinurl) {
-          const urlObj = new URL(autologinResponse.autologinurl);
-          urlObj.searchParams.set('siteurl', contentUrl);
-          contentUrl = urlObj.toString();
-        }
-      } catch (err: any) {
-        console.warn("Failed to fetch autologin key. Moodle token might be stale or not from mobile app:", err.message);
+    try {
+      const autologinResponse = await moodle.call<any>('tool_mobile_get_autologin_key', {
+        privatetoken: privateToken
+      }, { cache: 'no-store' }, session.user.moodleToken);
+
+      if (autologinResponse && autologinResponse.autologinurl) {
+        const urlObj = new URL(autologinResponse.autologinurl);
+        urlObj.searchParams.set('siteurl', contentUrl);
+        contentUrl = urlObj.toString();
       }
+    } catch (err: any) {
+      console.log("Failed to fetch autologin key:", err.message);
     }
   }
 
