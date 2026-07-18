@@ -8,7 +8,15 @@ import { AnnouncementsList } from '@/components/AnnouncementsList';
 
 export default async function StudentDashboard() {
   const session = await auth();
-  if (!session?.user?.id || !session.user.moodleToken) redirect("/");
+  
+  if (!session?.user?.id || !session.user.moodleToken) {
+    return (
+      <div style={{ padding: '50px', background: 'red', color: 'white', fontSize: '20px', zIndex: 9999, position: 'relative' }}>
+        <h1>DEBUG INFO (Please screenshot this!)</h1>
+        <pre>{JSON.stringify(session, null, 2)}</pre>
+      </div>
+    );
+  }
 
   // Fetch student's enrolments from Moodle
   const moodleCourses = await moodle.call<any[]>('core_enrol_get_users_courses', {
