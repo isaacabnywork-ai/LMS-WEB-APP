@@ -64,8 +64,10 @@ export default function LandingPage() {
         setLoadingText("");
       } else {
         setLoadingText("Success! Redirecting...");
-        // Hard redirect to clear any app router caches and fetch session
-        window.location.href = "/";
+        // Hard redirect directly to the dashboard to bypass cached hero page
+        if (role === "admin") window.location.href = "/admin/dashboard";
+        else if (role === "teacher") window.location.href = "/teacher/dashboard";
+        else window.location.href = "/student/dashboard";
       }
     } catch (err: any) {
       setError(`Error: ${err?.message || String(err)}`);
