@@ -19,10 +19,11 @@ export default async function StudentDashboard() {
   }
 
   // Fetch student's enrolments from Moodle
-  const moodleCourses = await moodle.call<any[]>('core_enrol_get_users_courses', {
+  const rawCourses = await moodle.call<any[]>('core_enrol_get_users_courses', {
     userid: session.user.id
   }, { cache: 'no-store' }, session.user.moodleToken).catch(() => []);
 
+  const moodleCourses = Array.isArray(rawCourses) ? rawCourses : [];
   const enrolledCount = moodleCourses.length || 0;
   
   const myCourses = moodleCourses.map((c: any) => ({
@@ -36,12 +37,13 @@ export default async function StudentDashboard() {
   const completedCount = myCourses.filter(c => c.progress === 100).length;
 
   // Fetch upcoming assignments from Moodle
-  const assignmentsData = await moodle.call<any>('mod_assign_get_assignments', {}, { cache: 'no-store' }, session.user.moodleToken).catch(() => ({ courses: [] }));
+  const rawAssignmentsData = await moodle.call<any>('mod_assign_get_assignments', {}, { cache: 'no-store' }, session.user.moodleToken).catch(() => ({ courses: [] }));
+  const assignmentsData = rawAssignmentsData?.courses ? rawAssignmentsData : { courses: [] };
   
   const nowInSeconds = Date.now() / 1000;
   let allAssignments: any[] = [];
   
-  if (assignmentsData.courses) {
+  if (Array.isArray(assignmentsData.courses)) {
     assignmentsData.courses.forEach((c: any) => {
       if (c.assignments) {
         c.assignments.forEach((a: any) => {
