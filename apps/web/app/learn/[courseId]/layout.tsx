@@ -4,6 +4,16 @@ import { redirect } from "next/navigation";
 import { CourseSidebarClient } from "./CourseSidebarClient";
 import { moodle } from "@/lib/moodle/client";
 
+
+function decodeHtmlEntities(text: string) {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'");
+}
+
 export default async function LearnLayout({
   children,
   params
@@ -57,7 +67,7 @@ export default async function LearnLayout({
     .filter((section: any) => section.name && section.modules.length > 0)
     .map((section: any, index: number) => ({
       id: String(section.id),
-      title: section.name,
+      title: decodeHtmlEntities(section.name),
       position: index,
       items: section.modules.map((mod: any, modIndex: number) => {
         let type = "PAGE";
@@ -82,7 +92,7 @@ export default async function LearnLayout({
 
         return {
           id: String(mod.id),
-          title: mod.name,
+          title: decodeHtmlEntities(mod.name),
           type: type,
           position: modIndex,
           uservisible: isUserVisible

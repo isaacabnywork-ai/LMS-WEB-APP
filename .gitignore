@@ -37,3 +37,15 @@ yarn-error.log*
 .DS_Store
 *.pem
 .env*
+*.orig
+node_modules*
+
+# Local scratch and test scripts
+scratch/
+conflicted.txt
+patch.diff
+patch_entities.js
+moodle_login.html
+test-*
+list-*
+promote-user.*

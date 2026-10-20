@@ -31,16 +31,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           
           const moodleUser = rawMoodleUser as any;
 
-          const assignedRole = (credentials.role as string) || "student";
-
           const userId = String(moodleUser.id);
           const userName = moodleUser.name || "User";
+
+          // FIX: Do NOT trust the client-provided role. 
+          // Always default to 'student' for new accounts created via Moodle login.
+          // If the user already exists in our DB, keep their existing role (e.g. if they were manually promoted to 'admin' or 'teacher').
+          const existingUser = await prisma.user.findUnique({
+            where: { id: userId }
+          });
+          
+          const assignedRole = existingUser?.role || "student";
 
           await prisma.user.upsert({
             where: { id: userId },
             update: {
               email: moodleUser.email,
-              role: assignedRole,
+              // We do NOT update the role here to prevent downgrading admins back to students
             },
             create: {
               id: userId,

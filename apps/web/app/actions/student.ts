@@ -9,28 +9,24 @@ export async function enrollInCourse(courseId: string) {
   if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
   try {
-    console.log("Enrolling with courseId:", courseId, "userid:", session.user.id);
-    // Attempt manual enrolment via Moodle Admin token
-    await moodle.call('enrol_manual_enrol_users', {
-      'enrolments[0][roleid]': 5, // Standard student role ID
-      'enrolments[0][userid]': session.user.id,
-      'enrolments[0][courseid]': courseId
-    });
-  } catch (error: any) {
-    // Moodle often throws 'Message was not sent' if email isn't configured, even though enrolment succeeded.
-    if (error.message && error.message.includes('Message was not sent')) {
-      console.log("Enrolment succeeded but Moodle email notification failed. Ignoring.");
-    } else {
-      console.error("Enrolment error:", error.message);
-      return { success: false, error: `This course does not have Manual Enrolment enabled, or you are already enrolled. (${error.message})` };
-    }
-  }
+    // 1. Fetch course details to get the title and summary for Stripe
+    const coursesResponse = await moodle.call<any>('core_course_get_courses_by_field', {
+      field: 'id',
+      value: courseId
+    }, { cache: 'no-store' }, session.user.moodleToken).catch(() => ({ courses: [] }));
+    
+    const course = coursesResponse.courses?.[0];
+    if (!course) return { success: false, error: "Course not found" };
 
-  revalidatePath(`/student/courses/${courseId}`);
-  revalidatePath(`/student/courses`);
-  revalidatePath(`/student/catalog`);
-  revalidatePath(`/student/dashboard`);
-  return { success: true };
+    // 2. Redirect to Stripe Checkout instead of directly enrolling
+    // This closes the loophole where users could bypass payment.
+    await createStripeCheckout(courseId, course.fullname, course.summary);
+    
+  } catch (error: any) {
+    if (error.message === "NEXT_REDIRECT") throw error; // Allow Next.js redirect to bubble up
+    console.error("Checkout initiation error:", error.message);
+    return { success: false, error: "Failed to initiate checkout." };
+  }
 }
 
 import { redirect } from "next/navigation";

@@ -219,3 +219,36 @@ export async function createAnnouncement(data: { courseId: string; title: string
   revalidatePath(`/teacher/announcements`);
   return { success: true };
 }
+
+export async function redirectToCourseEditor(courseId: string) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "teacher") {
+    throw new Error("Unauthorized");
+  }
+
+  const privateToken = (session.user as any).privateToken;
+  const moodleBaseUrl = process.env.MOODLE_URL?.replace(/\/$/, '') || "http://localhost:8080";
+  const targetUrl = `${moodleBaseUrl}/course/view.php?id=${courseId}&edit=1`;
+
+  let finalUrl = targetUrl;
+
+  if (privateToken) {
+    try {
+      const autologinResponse = await moodle.call<any>('tool_mobile_get_autologin_key', {
+        privatetoken: privateToken
+      }, { cache: 'no-store' }, session.user.moodleToken);
+
+      if (autologinResponse && autologinResponse.autologinurl && autologinResponse.key) {
+        const urlObj = new URL(autologinResponse.autologinurl);
+        urlObj.searchParams.set('userid', session.user.id);
+        urlObj.searchParams.set('key', autologinResponse.key);
+        urlObj.searchParams.set('urltogo', targetUrl);
+        finalUrl = urlObj.toString();
+      }
+    } catch (err: any) {
+      console.error("Failed to generate autologin URL:", err.message);
+    }
+  }
+
+  redirect(finalUrl);
+}
